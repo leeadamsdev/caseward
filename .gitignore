@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+auth.json
+*.log
+/backend/vendor/
+/backend/bootstrap/cache/
+/backend/storage/
+/backend/.phpunit.cache/
+/backend/.phpunit.result.cache

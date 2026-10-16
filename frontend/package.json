@@ -1,0 +1,42 @@
+{
+    "name": "@caseward/frontend",
+    "private": true,
+    "type": "module",
+    "packageManager": "pnpm@12.14.0",
+    "engines": {
+        "node": "^24.22.0",
+        "pnpm": "^12.14.0"
+    },
+    "scripts": {
+        "dev": "react-router dev",
+        "build": "react-router build",
+        "check": "pnpm run format:check && pnpm run typecheck && pnpm run lint && pnpm run test",
+        "format": "prettier . --write",
+        "format:check": "prettier . --check",
+        "lint": "eslint . --max-warnings 0",
+        "test": "playwright test",
+        "typecheck": "react-router typegen && tsc --noEmit"
+    },
+    "dependencies": {
+        "@react-router/node": "^8.4.0",
+        "isbot": "^5.2.2",
+        "react": "^19.3.1",
+        "react-dom": "^19.3.1",
+        "react-router": "^8.4.0"
+    },
+    "devDependencies": {
+        "@eslint/js": "^10.0.1",
+        "@playwright/test": "1.64.1",
+        "@react-router/dev": "^8.4.0",
+        "@types/node": "^24.0.0",
+        "@types/react": "^19.3.0",
+        "@types/react-dom": "^19.3.0",
+        "eslint": "^10.12.0",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-react-hooks": "^7.1.1",
+        "prettier": "^3.9.10",
+        "typescript": "~6.0.3",
+        "typescript-eslint": "^8.71.2",
+        "vite": "^8.3.4"
+    }
+}

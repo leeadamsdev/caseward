@@ -24,7 +24,7 @@ jobs:
                   echo "APP_GID=$(id -g)" >> "$GITHUB_ENV"
 
             - name: Build and start services
-              run: docker compose up --build --wait --wait-timeout 300
+              run: docker compose up --build --wait --wait-timeout 300 backend
 
             - name: Check backend
               run: docker compose exec -T backend composer check

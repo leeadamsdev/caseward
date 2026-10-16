@@ -8,3 +8,8 @@ auth.json
 /backend/storage/
 /backend/.phpunit.cache/
 /backend/.phpunit.result.cache
+/frontend/node_modules/
+/frontend/.react-router/
+/frontend/build/
+/frontend/playwright-report/
+/frontend/test-results/

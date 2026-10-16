@@ -1,6 +1,28 @@
 name: caseward
 
 services:
+    frontend:
+        build:
+            context: ./docker/frontend
+            args:
+                APP_UID: ${APP_UID:-1000}
+                APP_GID: ${APP_GID:-1000}
+        ports:
+            - "127.0.0.1:5173:5173"
+        volumes:
+            - ./frontend:/var/www/app
+            - ./.editorconfig:/var/www/.editorconfig:ro
+            - frontend_node_modules:/var/www/app/node_modules
+        environment:
+            CHOKIDAR_USEPOLLING: "true"
+        init: true
+        healthcheck:
+            test: ["CMD", "node", "--input-type=module", "-e", "const response = await fetch('http://127.0.0.1:5173'); process.exit(response.ok ? 0 : 1);"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 120s
+
     backend:
         build:
             context: ./docker/backend
@@ -37,5 +59,6 @@ services:
             retries: 10
 
 volumes:
+    frontend_node_modules:
     backend_vendor:
     postgres_data:

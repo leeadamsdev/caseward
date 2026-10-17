@@ -23,5 +23,12 @@
         <env name="DB_USERNAME" value="caseward_testing" force="true"/>
         <env name="DB_PASSWORD" value="caseward_testing_local" force="true"/>
         <env name="DB_URL" value="" force="true"/>
+        <env name="REDIS_HOST" value="valkey" force="true"/>
+        <env name="REDIS_PORT" value="6379" force="true"/>
+        <env name="REDIS_USERNAME" value="caseward_testing" force="true"/>
+        <env name="REDIS_PASSWORD" value="caseward_testing_local" force="true"/>
+        <env name="REDIS_DB" value="1" force="true"/>
+        <env name="REDIS_PREFIX" value="caseward_testing:" force="true"/>
+        <env name="REDIS_URL" value="" force="true"/>
     </php>
 </phpunit>

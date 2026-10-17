@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\TestCase;
+use Tests\TestCase;
 
 class ApplicationTest extends TestCase
 {

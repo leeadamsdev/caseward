@@ -5,6 +5,8 @@ FROM php:8.5.11-cli-trixie
 RUN apt-get update \
     && apt-get install -y --no-install-recommends unzip libpq-dev libonig-dev \
     && docker-php-ext-install -j"$(nproc)" pdo_pgsql mbstring pcntl \
+    && pecl install redis-6.3.0 \
+    && docker-php-ext-enable redis \
     && cp "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini" \
     && rm -rf /var/lib/apt/lists/*
 

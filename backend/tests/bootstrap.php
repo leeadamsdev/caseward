@@ -23,3 +23,16 @@ if (! $app->environment('testing')
 ) {
     throw new LogicException('Refusing to run tests outside the isolated PostgreSQL test database. Clear cached configuration with php artisan config:clear.');
 }
+
+$redisPrefix = $config->get('database.redis.options.prefix');
+
+if ($config->get('cache.limiter') !== 'redis'
+    || $config->get('database.redis.client') !== 'phpredis'
+    || $config->get('database.redis.default.database') !== 1
+    || $config->get('database.redis.default.username') !== 'caseward_testing'
+    || ! is_string($redisPrefix)
+    || ! str_starts_with($redisPrefix, 'caseward_testing:')
+    || ! in_array($config->get('database.redis.default.url'), [null, ''], true)
+) {
+    throw new LogicException('Refusing to run tests outside the isolated Valkey test database. Clear cached configuration with php artisan config:clear.');
+}

@@ -1,0 +1,3 @@
+user default off
+user caseward on >caseward_local db=0 ~caseward:* +ping +select +get +set +setex +exists +del +incrby +expire +ttl +hget +hmset +hincrby +eval +evalsha
+user caseward_testing on >caseward_testing_local db=1 ~caseward_testing:* +ping +select +get +set +setex +exists +del +incrby +expire +ttl +hget +hmset +hincrby +eval +evalsha +acl|dryrun

@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
-import { Outlet, Scripts } from "react-router";
+import { Links, Meta, Outlet, Scripts } from "react-router";
 import "~/app.css";
+
+export function meta() {
+    return [{ title: "Caseward" }];
+}
 
 export function Layout({ children }: { children: ReactNode }) {
     return (
@@ -34,7 +38,8 @@ export function Layout({ children }: { children: ReactNode }) {
                     color="#377CF6"
                 />
                 <link rel="manifest" href="/favicons/site.webmanifest" />
-                <title>Caseward</title>
+                <Meta />
+                <Links />
             </head>
             <body>
                 {children}

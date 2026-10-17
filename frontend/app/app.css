@@ -26,6 +26,11 @@
     --color-border: var(--border);
     --color-input: var(--input);
     --color-ring: var(--ring);
+    --color-danger-surface: var(--danger-surface);
+    --color-warning: var(--warning);
+    --color-warning-surface: var(--warning-surface);
+    --color-success: var(--success);
+    --color-success-surface: var(--success-surface);
     --radius-sm: calc(var(--radius) * 0.6);
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);
@@ -63,7 +68,37 @@
     --border: var(--brand-border);
     --input: var(--brand-muted);
     --ring: var(--primary);
+    --danger-surface: #fff0f2;
+    --warning: #92400e;
+    --warning-surface: #fff7e3;
+    --success: #087f3e;
+    --success-surface: #d1f5df;
     --radius: 0.625rem;
+}
+
+.feedback-reveal {
+    display: grid;
+    grid-template-rows: 1fr;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .feedback-reveal {
+        animation: feedback-reveal 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+}
+
+@keyframes feedback-reveal {
+    from {
+        grid-template-rows: 0fr;
+        opacity: 0;
+        transform: translateY(-0.25rem);
+    }
+
+    to {
+        grid-template-rows: 1fr;
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @layer base {

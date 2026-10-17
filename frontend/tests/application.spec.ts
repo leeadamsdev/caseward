@@ -4,16 +4,23 @@ test.afterEach(async ({ page }) => {
     expect(await page.pageErrors()).toEqual([]);
 });
 
-test("starts and renders the home page", async ({ page }) => {
+test("starts and opens registration from the home page", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page).toHaveTitle("Caseward");
+    await expect(page).toHaveURL("/register");
+    await expect(page).toHaveTitle("Create account | Caseward");
     await expect(
         page
             .getByRole("main")
-            .getByRole("heading", { name: "Caseward", exact: true }),
+            .getByRole("heading", { name: "Create account", exact: true }),
     ).toBeVisible();
-    await expect(page.getByRole("status")).toHaveCount(0);
+    await expect(
+        page.getByText("Loading Caseward…", { exact: true }),
+    ).toHaveCount(0);
+    await expect(page.locator("body")).toHaveCSS(
+        "font-family",
+        /Inter Variable/,
+    );
 });
 
 test("handles unknown deep links and returns home using the keyboard", async ({
@@ -36,8 +43,8 @@ test("handles unknown deep links and returns home using the keyboard", async ({
     ).toBeFocused();
     await page.keyboard.press("Enter");
 
-    await expect(page).toHaveURL("/");
+    await expect(page).toHaveURL("/register");
     await expect(
-        page.getByRole("heading", { name: "Caseward", exact: true }),
+        page.getByRole("heading", { name: "Create account", exact: true }),
     ).toBeVisible();
 });

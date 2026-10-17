@@ -4,7 +4,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
-    --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+    --font-sans: "Inter Variable", Arial, sans-serif;
     --color-brand-blue: var(--brand-blue);
     --color-brand-violet: var(--brand-violet);
     --color-background: var(--background);
@@ -60,7 +60,11 @@
     --secondary: var(--brand-border);
     --secondary-foreground: var(--foreground);
     --muted: var(--brand-canvas);
-    --muted-foreground: var(--brand-muted);
+    --muted-foreground: color-mix(
+        in srgb,
+        var(--brand-muted) 90%,
+        var(--brand-ink)
+    );
     --accent: color-mix(in srgb, var(--brand-blue) 10%, var(--card));
     --accent-foreground: var(--foreground);
     --destructive: #b91c1c;

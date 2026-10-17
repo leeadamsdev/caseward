@@ -1,0 +1,25 @@
+.page-spinner {
+    background: conic-gradient(
+        from 30deg,
+        transparent 15%,
+        var(--brand-blue) 65%,
+        var(--brand-violet)
+    );
+    mask: radial-gradient(
+        farthest-side,
+        transparent calc(100% - 3px),
+        #000 calc(100% - 2.5px)
+    );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .page-spinner {
+        animation: page-spin 1.3s linear infinite;
+    }
+}
+
+@keyframes page-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

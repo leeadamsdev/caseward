@@ -1,36 +1,17 @@
 import type { ReactNode } from "react";
+import { useLocation } from "react-router";
 import { ButtonLink } from "~/components/ui/button";
 import "./auth.css";
 
-export function AuthShell({
-    children,
-    titleId = "auth-title",
-}: {
-    children: ReactNode;
-    titleId?: string;
-}) {
+export function AuthShell({ children }: { children: ReactNode }) {
+    const { pathname } = useLocation();
+
     return (
-        <main className="auth-page relative isolate flex min-h-svh items-center justify-center overflow-clip px-4 py-8 sm:px-6 sm:py-12">
-            <svg
-                className="pointer-events-none absolute inset-0 -z-10 size-full text-brand-blue/8"
-                viewBox="0 0 1440 1000"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-            >
-                <path
-                    className="auth-wave auth-wave-top"
-                    fill="currentColor"
-                    d="M0 240C180 500 280 30 620 150S1120 420 1440 180V0H0Z"
-                />
-                <path
-                    className="auth-wave auth-wave-bottom"
-                    fill="currentColor"
-                    d="M0 740C250 560 490 1050 790 850S1160 600 1440 720V1000H0Z"
-                />
-            </svg>
+        <main className="relative isolate flex min-h-svh items-center justify-center overflow-clip px-4 py-8 sm:px-6 sm:py-12">
             <section
+                key={pathname}
                 className="auth-card w-full max-w-120 rounded-2xl border border-border/70 bg-card px-5 py-8 text-card-foreground shadow-[0_12px_60px_-20px_color-mix(in_srgb,var(--brand-blue)_18%,transparent)] sm:px-9 sm:py-9"
-                aria-labelledby={titleId}
+                aria-labelledby="auth-title"
             >
                 <img
                     src="/logos/caseward-logo-light.svg"

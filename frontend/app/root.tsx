@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import { Links, Meta, Outlet, Scripts } from "react-router";
+import interLatin from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
 import "~/app.css";
-import { AuthShell } from "~/features/authentication/auth-shell";
+import { ErrorPage } from "~/components/feedback/error-page";
+import { LoadingPage } from "~/components/feedback/loading-page";
+import { BrandBackground } from "~/components/layout/brand-background";
 
 export function meta() {
     return [{ title: "Caseward" }];
@@ -40,9 +43,17 @@ export function Layout({ children }: { children: ReactNode }) {
                 />
                 <link rel="manifest" href="/favicons/site.webmanifest" />
                 <Meta />
+                <link
+                    rel="preload"
+                    href={interLatin}
+                    as="font"
+                    type="font/woff2"
+                    crossOrigin="anonymous"
+                />
                 <Links />
             </head>
-            <body>
+            <body className="relative isolate">
+                <BrandBackground />
                 {children}
                 <Scripts />
             </body>
@@ -55,29 +66,9 @@ export default function App() {
 }
 
 export function HydrateFallback() {
-    return (
-        <AuthShell titleId="loading-title">
-            <p
-                id="loading-title"
-                className="mt-6 text-center text-muted-foreground"
-                role="status"
-            >
-                Loading Caseward…
-            </p>
-        </AuthShell>
-    );
+    return <LoadingPage />;
 }
 
 export function ErrorBoundary() {
-    return (
-        <main className="space-y-4 p-6">
-            <h1 className="text-2xl font-semibold tracking-tight">
-                Something went wrong
-            </h1>
-            <p className="text-muted-foreground">Please try again.</p>
-            <a className="text-primary underline underline-offset-4" href="/">
-                Return to home
-            </a>
-        </main>
-    );
+    return <ErrorPage />;
 }

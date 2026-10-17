@@ -1,5 +1,5 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { checkAccessibility } from "./accessibility";
 
 const account = {
     name: "Alex Chen",
@@ -16,13 +16,6 @@ async function fillRegistration(page: Page) {
     await page
         .getByLabel("Confirm password", { exact: true })
         .fill(account.password_confirmation);
-}
-
-async function checkAccessibility(page: Page) {
-    const result = await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
-        .analyze();
-    expect(result.violations).toEqual([]);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -223,7 +216,7 @@ test.describe("password help on touch devices", () => {
 test("animates the background and respects reduced motion", async ({
     page,
 }) => {
-    const waves = page.locator(".auth-wave");
+    const waves = page.locator(".brand-wave");
     const initialTransform = await waves
         .first()
         .evaluate((element) => getComputedStyle(element).transform);

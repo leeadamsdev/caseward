@@ -1,5 +1,5 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { checkAccessibility } from "./accessibility";
 
 const user = { id: 7, name: "Alex Chen", email: "alex.chen@example.com" };
 const password = "  a long Unicode passphrase 🔐  ";
@@ -7,13 +7,6 @@ const password = "  a long Unicode passphrase 🔐  ";
 async function fillLogin(page: Page) {
     await page.getByLabel("Email address", { exact: true }).fill(user.email);
     await page.getByLabel("Password", { exact: true }).fill(password);
-}
-
-async function checkAccessibility(page: Page) {
-    const result = await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
-        .analyze();
-    expect(result.violations).toEqual([]);
 }
 
 async function authenticatedSession(page: Page) {

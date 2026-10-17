@@ -15,27 +15,15 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Sleep;
-use Illuminate\Testing\TestResponse;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RedisException;
-use Symfony\Component\HttpFoundation\Response;
+use Tests\Concerns\InteractsWithBrowserSession;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
 {
+    use InteractsWithBrowserSession;
     use RefreshDatabase;
-
-    /** @var array<string, string> */
-    private array $cookies = [];
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        // Exercise real CSRF checks, which Laravel normally skips during tests.
-        $this->app->instance('env', 'local');
-        $this->withHeader('Origin', 'http://localhost:5173')->withCredentials();
-    }
 
     public function test_login_rotates_the_session_and_persists_only_the_expected_user_data(): void
     {
@@ -67,7 +55,7 @@ class AuthenticationTest extends TestCase
         $this->assertArrayNotHasKey($guard->getRecallerName(), $this->cookies);
 
         $this->browserRequest('GET', '/api/user')->assertOk()->assertExactJson([
-            'data' => ['id' => $user->id, 'name' => $user->name, 'email' => $user->email],
+            'data' => ['id' => $user->id, 'name' => $user->name, 'email' => $user->email, 'email_verified' => true],
         ])->assertHeader('Cache-Control', 'no-store, private');
     }
 
@@ -311,39 +299,20 @@ class AuthenticationTest extends TestCase
 
     private function createUser(string $password = 'correct horse battery staple'): User
     {
-        return User::query()->create([
+        $user = User::query()->create([
             'name' => 'Alex Example',
             'email' => 'alex@example.com',
             'password' => $password,
         ]);
+
+        $user->forceFill(['email_verified_at' => now()])->save();
+
+        return $user;
     }
 
     /** @return array{email: string, password: string} */
     private function credentials(): array
     {
         return ['email' => 'alex@example.com', 'password' => 'correct horse battery staple'];
-    }
-
-    /**
-     * @param  array<string, mixed>  $data
-     * @return TestResponse<Response>
-     */
-    private function browserRequest(string $method, string $uri, array $data = [], bool $csrf = true): TestResponse
-    {
-        // Carry browser cookies, but resolve fresh authentication and session state.
-        Auth::forgetGuards();
-        $this->app->forgetInstance('session.store');
-        $this->app->make('session')->forgetDrivers();
-        $this->unencryptedCookies = $this->cookies;
-
-        $response = $this->json($method, $uri, $data, [
-            'X-XSRF-TOKEN' => $csrf ? ($this->cookies['XSRF-TOKEN'] ?? '') : '',
-        ]);
-
-        foreach ($response->headers->getCookies() as $cookie) {
-            $this->cookies[$cookie->getName()] = $cookie->getValue() ?? '';
-        }
-
-        return $response;
     }
 }

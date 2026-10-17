@@ -15,6 +15,7 @@
     </testsuites>
     <php>
         <env name="APP_ENV" value="testing" force="true"/>
+        <env name="APP_URL" value="http://localhost:5173" force="true"/>
         <env name="APP_KEY" value="base64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=" force="true"/>
         <env name="MAIL_MAILER" value="array" force="true"/>
         <env name="MAIL_HOST" value="mailpit" force="true"/>

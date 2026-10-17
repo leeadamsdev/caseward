@@ -11,17 +11,27 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Redis;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\InteractsWithBrowserSession;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
 {
+    use InteractsWithBrowserSession;
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Notification::fake();
+        $this->browserRequest('GET', '/sanctum/csrf-cookie')->assertNoContent();
+    }
 
     public function test_an_account_can_be_created_without_a_workspace(): void
     {
-        $this->postJson('/api/register', [
+        $this->browserRequest('POST', '/api/register', [
             ...$this->registration(),
             'name' => '  Alex Example  ',
             'email' => '  Alex@Example.COM  ',
@@ -32,7 +42,9 @@ class RegistrationTest extends TestCase
                 'id' => User::query()->sole()->id,
                 'name' => 'Alex Example',
                 'email' => 'alex@example.com',
+                'email_verified' => false,
             ],
+            'meta' => ['verification_email_sent' => true],
         ]);
 
         $user = User::query()->sole();
@@ -42,14 +54,19 @@ class RegistrationTest extends TestCase
         $this->assertTrue(Hash::check($this->registration()['password'], $user->password));
         $this->assertSame('argon2id', password_get_info($user->password)['algoName']);
         $this->assertArrayNotHasKey('password', $user->toArray());
-        $this->assertGuest();
+        $this->assertAuthenticatedAs($user);
+        $this->browserRequest('GET', '/api/session')->assertOk()->assertJsonPath('data.email_verified', false);
+        $this->browserRequest('GET', '/api/user')->assertForbidden()->assertJsonPath('code', 'email_unverified');
     }
 
     public function test_duplicate_registration_does_not_change_the_existing_account(): void
     {
-        $this->postJson('/api/register', $this->registration())->assertCreated();
+        $this->browserRequest('POST', '/api/register', $this->registration())->assertCreated();
 
-        $this->postJson('/api/register', [
+        $this->cookies = [];
+        $this->browserRequest('GET', '/sanctum/csrf-cookie')->assertNoContent();
+
+        $this->browserRequest('POST', '/api/register', [
             ...$this->registration(),
             'name' => 'Another Person',
             'email' => ' ALEX@EXAMPLE.COM ',
@@ -72,7 +89,7 @@ class RegistrationTest extends TestCase
             ]);
         });
 
-        $this->postJson('/api/register', $this->registration())
+        $this->browserRequest('POST', '/api/register', $this->registration())
             ->assertUnprocessable()
             ->assertJsonValidationErrors('email');
 
@@ -82,7 +99,7 @@ class RegistrationTest extends TestCase
 
     public function test_missing_fields_return_json_without_an_accept_header(): void
     {
-        $this->post('/api/register')->assertUnprocessable()
+        $this->browserRequest('POST', '/api/register', headers: ['Accept' => ''])->assertUnprocessable()
             ->assertJsonValidationErrors(['name', 'email', 'password']);
 
         $this->assertDatabaseCount('users', 0);
@@ -92,7 +109,7 @@ class RegistrationTest extends TestCase
     #[DataProvider('invalidRegistrations')]
     public function test_invalid_registration_does_not_create_an_account(array $invalid, string $field): void
     {
-        $this->postJson('/api/register', [...$this->registration(), ...$invalid])
+        $this->browserRequest('POST', '/api/register', [...$this->registration(), ...$invalid])
             ->assertUnprocessable()
             ->assertJsonValidationErrors($field);
 
@@ -132,7 +149,7 @@ class RegistrationTest extends TestCase
     #[DataProvider('validPasswords')]
     public function test_passwords_are_preserved_without_trimming_or_truncation(string $password): void
     {
-        $this->postJson('/api/register', [
+        $this->browserRequest('POST', '/api/register', [
             ...$this->registration(),
             'password' => $password,
             'password_confirmation' => $password,
@@ -155,7 +172,7 @@ class RegistrationTest extends TestCase
     {
         $password = Hash::make('a different original password');
 
-        $this->postJson('/api/register', [
+        $this->browserRequest('POST', '/api/register', [
             ...$this->registration(),
             'password' => $password,
             'password_confirmation' => $password,
@@ -167,7 +184,7 @@ class RegistrationTest extends TestCase
 
     public function test_the_database_prevents_duplicate_emails(): void
     {
-        $this->postJson('/api/register', $this->registration())->assertCreated();
+        $this->browserRequest('POST', '/api/register', $this->registration())->assertCreated();
 
         $this->expectException(UniqueConstraintViolationException::class);
 
@@ -201,15 +218,15 @@ class RegistrationTest extends TestCase
     public function test_registration_attempts_are_rate_limited_per_ip_across_connections(): void
     {
         for ($attempt = 0; $attempt < 5; $attempt++) {
-            $this->postJson('/api/register')->assertUnprocessable();
+            $this->browserRequest('POST', '/api/register')->assertUnprocessable();
         }
 
         Redis::purge();
 
-        $this->postJson('/api/register')->assertTooManyRequests()->assertHeader('Retry-After');
+        $this->browserRequest('POST', '/api/register')->assertTooManyRequests()->assertHeader('Retry-After');
 
-        $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.2'])
-            ->postJson('/api/register')->assertUnprocessable();
+        $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.2']);
+        $this->browserRequest('POST', '/api/register')->assertUnprocessable();
 
         $this->assertDatabaseCount('users', 0);
     }

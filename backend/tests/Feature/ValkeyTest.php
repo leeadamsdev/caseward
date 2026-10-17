@@ -15,10 +15,12 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Sleep;
 use Redis as PhpRedis;
 use RedisException;
+use Tests\Concerns\InteractsWithBrowserSession;
 use Tests\TestCase;
 
 class ValkeyTest extends TestCase
 {
+    use InteractsWithBrowserSession;
     use RefreshDatabase;
 
     public function test_expiring_keys_are_shared_between_connections(): void
@@ -102,7 +104,7 @@ class ValkeyTest extends TestCase
         Config::set('database.redis.default.port', 1);
         Redis::purge();
 
-        $this->postJson('/api/register', [
+        $this->browserRequest('POST', '/api/register', [
             'name' => 'Alex Example',
             'email' => 'alex@example.com',
             'password' => 'a sufficiently long passphrase',
@@ -117,7 +119,9 @@ class ValkeyTest extends TestCase
         Config::set('database.redis.default.port', 6379);
         $this->app->forgetInstance('redis');
         Redis::clearResolvedInstance('redis');
+        Cache::purge('redis');
 
-        $this->postJson('/api/register')->assertUnprocessable();
+        $this->browserRequest('GET', '/sanctum/csrf-cookie')->assertNoContent();
+        $this->browserRequest('POST', '/api/register')->assertUnprocessable();
     }
 }

@@ -9,4 +9,6 @@ mkdir -p bootstrap/cache storage/framework/views
 
 composer install --no-interaction --prefer-dist --no-progress
 
+php artisan migrate --no-interaction
+
 exec "$@"

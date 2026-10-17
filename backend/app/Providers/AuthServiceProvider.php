@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 
+use function is_string;
+
 class AuthServiceProvider extends ServiceProvider
 {
     public function boot(): void
@@ -31,13 +33,25 @@ class AuthServiceProvider extends ServiceProvider
         });
 
         $this->callAfterResolving(RateLimiter::class, function (RateLimiter $limiter): void {
+            $limiter->for('login', function (Request $request): array {
+                $limits = [Limit::perMinute(5)->by("ip:{$request->ip()}")];
+                $email = $request->input('email');
+
+                if (is_string($email)) {
+                    $emailHash = hash('sha256', Str::lower(trim($email)));
+                    $limits[] = Limit::perMinute(10)->by("email:{$emailHash}");
+                }
+
+                return $limits;
+            });
+
             $limiter->for('verification-email', function (Request $request): array {
                 $user = $request->user();
                 abort_unless($user instanceof User, 401);
                 $id = $user->id;
 
                 return [
-                    Limit::perMinute(1)->by("minute:{$id}"),
+                    Limit::perSecond(1, Config::integer('verification.resend_interval_seconds'))->by("minute:{$id}"),
                     Limit::perHour(5)->by("hour:{$id}"),
                 ];
             });

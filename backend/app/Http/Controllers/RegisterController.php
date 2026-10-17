@@ -21,6 +21,7 @@ class RegisterController
             ['email' => $request->string('email')->toString()],
             [
                 'name' => $request->string('name')->toString(),
+                // Hash untrusted input explicitly; the model cast accepts existing hashes.
                 'password' => Hash::make($request->string('password')->toString()),
             ],
         );

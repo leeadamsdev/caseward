@@ -6,11 +6,11 @@ export type ApiFailure = {
     status: "error";
     reason: "network" | "server" | "expired";
 };
-export type RateLimit = {
-    status: "rate-limited";
+export type RetryWindow = {
     retryAt: number;
     receivedAt: number;
 };
+export type RateLimit = RetryWindow & { status: "rate-limited" };
 export type FormErrors<Field extends string> = Partial<Record<Field, string[]>>;
 export type FormFailure<Field extends string> =
     | ApiFailure
@@ -97,13 +97,16 @@ export function validationErrors<Field extends string>(
 }
 
 export function rateLimit(response: Response): RateLimit {
+    return { status: "rate-limited", ...retryWindow(response) };
+}
+
+export function retryWindow(response: Response): RetryWindow {
     const receivedAt = Date.now();
     const header = response.headers.get("Retry-After")?.trim() ?? "";
     const retryAt = /^\d+$/.test(header)
         ? receivedAt + Number(header) * 1000
         : Date.parse(header);
     return {
-        status: "rate-limited",
         receivedAt,
         retryAt: Number.isFinite(retryAt)
             ? Math.max(receivedAt, retryAt)

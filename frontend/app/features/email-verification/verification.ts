@@ -5,8 +5,10 @@ import {
     rateLimit,
     responseBody,
     sessionPost,
+    retryWindow,
     type ApiFailure,
     type RateLimit,
+    type RetryWindow,
 } from "~/lib/api";
 import { verificationPath, verificationSignIn } from "./links";
 
@@ -14,6 +16,54 @@ export type VerificationResult =
     | { status: "verified" | "invalid" | "account-mismatch" | "email-mismatch" }
     | ApiFailure
     | RateLimit;
+
+export type ResendResult =
+    | { status: "sent"; retry: RetryWindow }
+    | RateLimit
+    | {
+          status: "error";
+          reason: ApiFailure["reason"] | "delivery";
+          retry?: RetryWindow;
+      };
+
+export async function waitingAction({
+    request,
+}: {
+    request: Request;
+}): Promise<ResendResult | Response> {
+    const data = await request.clone().formData();
+    if (data.get("intent") === "logout") return signOut({ request });
+    if (data.get("intent") !== "resend")
+        return { status: "error", reason: "server" };
+    const response = await sessionPost(
+        request,
+        "/api/email/verification-notification",
+    );
+    if (!(response instanceof Response)) return response;
+    if (response.status === 204)
+        return { status: "sent", retry: retryWindow(response) };
+    if (response.status === 401) {
+        const value = data.get("returnTo");
+        const path = verificationPath(typeof value === "string" ? value : null);
+        return redirect(
+            path ? verificationSignIn(path) : "/login?reason=session",
+        );
+    }
+    if (response.status === 419) return { status: "error", reason: "expired" };
+    if (response.status === 429) return rateLimit(response);
+    const body = await responseBody(response);
+    if (
+        response.status === 503 &&
+        isRecord(body) &&
+        body.code === "verification_email_unavailable"
+    )
+        return {
+            status: "error",
+            reason: "delivery",
+            retry: retryWindow(response),
+        };
+    return { status: "error", reason: "server" };
+}
 
 export async function waitingLoader({ request }: { request: Request }) {
     const session = await loadSession(request);

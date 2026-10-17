@@ -429,8 +429,16 @@ for (const header of ["seconds", "date", "missing"]) {
         await checkAccessibility(page);
         await page.clock.fastForward(header === "missing" ? 61_000 : 4_000);
         await expect(
+            page.getByText("Too many attempts", { exact: true }),
+        ).toHaveCount(0);
+        await expect(
             page.getByText("You can try again", { exact: true }),
-        ).toBeVisible();
+        ).toHaveCount(0);
+        await expect(
+            page
+                .getByRole("status")
+                .filter({ hasText: "You can try again now." }),
+        ).toHaveText("You can try again now.");
         await expect(
             page.getByRole("button", { name: "Create account", exact: true }),
         ).toBeEnabled();

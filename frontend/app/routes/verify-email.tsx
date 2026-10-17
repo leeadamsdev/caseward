@@ -1,12 +1,14 @@
 import { AuthShell } from "~/features/authentication/auth-shell";
-import { signOut } from "~/features/authentication/session";
 import { SessionError } from "~/features/authentication/session-error";
 import { VerificationWaiting } from "~/features/email-verification/verification-waiting";
-import { waitingLoader } from "~/features/email-verification/verification";
+import {
+    waitingLoader,
+    waitingAction,
+} from "~/features/email-verification/verification";
 import type { Route } from "./+types/verify-email";
 
 export const clientLoader = waitingLoader;
-export const clientAction = signOut;
+export const clientAction = waitingAction;
 export function meta() {
     return [{ title: "Verify your email | Caseward" }];
 }

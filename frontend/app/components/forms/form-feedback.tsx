@@ -33,27 +33,28 @@ export function RateLimitNotice({
     ref: Ref<HTMLDivElement>;
 }) {
     return (
-        <Notice
-            ref={ref}
-            tabIndex={-1}
-            tone="warning"
-            title={remaining > 0 ? "Too many attempts" : "You can try again"}
-            className="mb-5"
-        >
-            <p role="status" aria-live="polite" aria-atomic="true">
-                {remaining > 0 ? (
-                    <>
+        <>
+            {remaining > 0 && (
+                <Notice
+                    ref={ref}
+                    tabIndex={-1}
+                    tone="warning"
+                    title="Too many attempts"
+                    className="mb-5"
+                >
+                    <p role="status" aria-live="polite" aria-atomic="true">
                         Please wait{" "}
                         <span aria-hidden="true">
                             {remaining} {remaining === 1 ? "second" : "seconds"}
                         </span>
                         <span className="sr-only">a little longer</span> before
                         trying again.
-                    </>
-                ) : (
-                    "You can try again now."
-                )}
+                    </p>
+                </Notice>
+            )}
+            <p className="sr-only" role="status">
+                {remaining <= 0 ? "You can try again now." : ""}
             </p>
-        </Notice>
+        </>
     );
 }

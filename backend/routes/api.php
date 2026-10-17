@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/register', RegisterController::class)->middleware('throttle:5,1,register');
 
-Route::post('/login', [SessionController::class, 'store'])->middleware('throttle:5,1,login');
+Route::post('/login', [SessionController::class, 'store'])->middleware('throttle:login');
 
 Route::middleware('auth:web')->group(function (): void {
     Route::get('/session', fn (Request $request): UserResource => new UserResource($request->user()))

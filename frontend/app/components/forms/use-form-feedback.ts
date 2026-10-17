@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import { useRetryCountdown } from "./use-retry-countdown";
 import type { FormErrors, FormFailure } from "~/lib/api";
 
 export function useFormFeedback<Field extends string>(
@@ -8,33 +9,11 @@ export function useFormFeedback<Field extends string>(
 ) {
     const formRef = useRef<HTMLFormElement>(null);
     const noticeRef = useRef<HTMLDivElement>(null);
-    const [now, setNow] = useState(0);
-    const retryAt =
-        result?.status === "rate-limited" ? result.retryAt : undefined;
-    const remaining =
-        result?.status === "rate-limited"
-            ? Math.max(
-                  0,
-                  Math.ceil(
-                      (result.retryAt - Math.max(now, result.receivedAt)) /
-                          1000,
-                  ),
-              )
-            : 0;
+    const remaining = useRetryCountdown(
+        result?.status === "rate-limited" ? result : undefined,
+    );
     const errors: FormErrors<Field> =
         !pending && result?.status === "validation" ? result.errors : {};
-
-    useEffect(() => {
-        if (retryAt === undefined) return;
-        const timer = setInterval(() => {
-            const time = Date.now();
-            setNow(time);
-            if (time >= retryAt) clearInterval(timer);
-        }, 250);
-        return () => {
-            clearInterval(timer);
-        };
-    }, [retryAt]);
 
     useEffect(() => {
         if (pending || !result) return;

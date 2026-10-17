@@ -1,21 +1,31 @@
 import { Mail } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useRevalidator, useSearchParams, useNavigation } from "react-router";
+import {
+    useRevalidator,
+    useSearchParams,
+    useNavigation,
+    useFetcher,
+} from "react-router";
 import { Button } from "~/components/ui/button";
 import { Notice } from "~/components/ui/notice";
 import { AuthHeading } from "~/features/authentication/auth-shell";
 import type { User } from "~/features/authentication/session";
 import { SignOutForm } from "~/features/authentication/sign-out-form";
+import { ResendVerificationForm } from "./resend-verification-form";
+import type { ResendResult } from "./verification";
 
 export function VerificationWaiting({ user }: { user: User }) {
     const revalidator = useRevalidator();
     const navigation = useNavigation();
-    const [params] = useSearchParams();
+    const resend = useFetcher<ResendResult>();
+    const resending = resend.state !== "idle";
+    const [params, setParams] = useSearchParams();
     const [checked, setChecked] = useState(false);
     const headingRef = useRef<HTMLHeadingElement>(null);
     const noticeRef = useRef<HTMLDivElement>(null);
     const pending = revalidator.state !== "idle";
-    const deliveryFailed = params.get("delivery") === "failed";
+    const deliveryFailed =
+        params.get("delivery") === "failed" && resend.data?.status !== "sent";
 
     useEffect(() => {
         headingRef.current?.focus({ preventScroll: true });
@@ -23,6 +33,12 @@ export function VerificationWaiting({ user }: { user: User }) {
     useEffect(() => {
         if (checked && !pending) noticeRef.current?.focus();
     }, [checked, pending]);
+    useEffect(() => {
+        if (resend.data?.status !== "sent" || !params.has("delivery")) return;
+        const next = new URLSearchParams(params);
+        next.delete("delivery");
+        setParams(next, { replace: true, preventScrollReset: true });
+    }, [resend.data, params, setParams]);
 
     return (
         <>
@@ -47,27 +63,28 @@ export function VerificationWaiting({ user }: { user: User }) {
                     {user.email}
                 </strong>
             </p>
-            {deliveryFailed ? (
-                <Notice
-                    tone="warning"
-                    title="Your account is saved"
-                    className="mt-6"
-                >
-                    <p>
-                        We couldn’t send your verification email. Please try
-                        again later.
-                    </p>
-                </Notice>
-            ) : (
-                <Notice className="mt-6">
-                    <p className="leading-6">
-                        Follow the link to verify your address before
-                        continuing. The link expires in 1 hour. If you don’t see
-                        the email, check your spam folder.
-                    </p>
-                </Notice>
-            )}
-            {checked && !pending && (
+            {!resend.data &&
+                (deliveryFailed ? (
+                    <Notice
+                        tone="warning"
+                        title="Your account is saved"
+                        className="mt-6"
+                    >
+                        <p>
+                            We couldn’t send your verification email. Please try
+                            resending it below.
+                        </p>
+                    </Notice>
+                ) : (
+                    <Notice className="mt-6">
+                        <p className="leading-6">
+                            Follow the link to verify your address before
+                            continuing. The link expires in 1 hour. If you don’t
+                            see the email, check your spam folder.
+                        </p>
+                    </Notice>
+                ))}
+            {checked && !pending && !resending && (
                 <Notice
                     ref={noticeRef}
                     tabIndex={-1}
@@ -80,20 +97,31 @@ export function VerificationWaiting({ user }: { user: User }) {
                     </p>
                 </Notice>
             )}
-            <Button
-                className="mt-6 w-full"
+            <ResendVerificationForm
+                fetcher={resend}
                 disabled={pending || navigation.state !== "idle"}
-                onClick={() => {
-                    setChecked(true);
-                    void revalidator.revalidate();
-                }}
+                variant={deliveryFailed ? "primary" : "outline"}
             >
-                {pending ? "Checking verification…" : "I’ve verified my email"}
-            </Button>
-            <p className="sr-only" role="status">
-                {pending ? "Checking your email verification status." : ""}
-            </p>
-            <SignOutForm disabled={pending} />
+                <Button
+                    className="w-full"
+                    variant={deliveryFailed ? "outline" : "primary"}
+                    disabled={
+                        pending || resending || navigation.state !== "idle"
+                    }
+                    onClick={() => {
+                        setChecked(true);
+                        void revalidator.revalidate();
+                    }}
+                >
+                    {pending
+                        ? "Checking verification…"
+                        : "I’ve verified my email"}
+                </Button>
+                <p className="sr-only" role="status">
+                    {pending ? "Checking your email verification status." : ""}
+                </p>
+            </ResendVerificationForm>
+            <SignOutForm disabled={pending || resending} />
         </>
     );
 }

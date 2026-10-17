@@ -308,6 +308,12 @@ test("honours verification rate limits and supports an explicit retry", async ({
     ).toBeVisible();
     await page.clock.fastForward(4_000);
     await expect(
+        page.getByText("Too many attempts", { exact: true }),
+    ).toHaveCount(0);
+    await expect(
+        page.getByText("You can try again", { exact: true }),
+    ).toHaveCount(0);
+    await expect(
         page.getByRole("button", { name: "Verify email", exact: true }),
     ).toBeEnabled();
 });

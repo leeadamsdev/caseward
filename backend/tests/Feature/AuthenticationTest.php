@@ -278,10 +278,50 @@ class AuthenticationTest extends TestCase
 
         $this->browserRequest('POST', '/api/login', $this->credentials())
             ->assertTooManyRequests()->assertHeader('Retry-After');
+        $this->browserRequest('POST', '/api/login', $this->credentials(), headers: [
+            'X-Forwarded-For' => '192.0.2.200', 'X-Real-IP' => '192.0.2.200',
+        ])->assertTooManyRequests();
         $this->browserRequest('POST', '/api/register')->assertUnprocessable();
 
         $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.2']);
         $this->browserRequest('POST', '/api/login', $this->credentials())->assertUnprocessable();
+    }
+
+    #[DataProvider('accountExistence')]
+    public function test_login_attempts_against_an_account_are_limited_across_ips_sessions_and_connections(bool $exists): void
+    {
+        if ($exists) {
+            $this->createUser();
+        }
+
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            $this->cookies = [];
+            $this->withServerVariables(['REMOTE_ADDR' => "192.0.2.{$attempt}"]);
+            $this->browserRequest('GET', '/sanctum/csrf-cookie')->assertNoContent();
+            $email = $attempt % 2 === 0 ? 'alex@example.com' : '  ALEX@EXAMPLE.COM  ';
+
+            $this->browserRequest('POST', '/api/login', [
+                'email' => $email,
+                'password' => 'a different long passphrase',
+            ])->assertUnprocessable();
+        }
+
+        Redis::purge();
+        $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.100']);
+        $this->browserRequest('POST', '/api/login', $this->credentials())
+            ->assertTooManyRequests()->assertHeader('Retry-After');
+        $this->browserRequest('GET', '/api/session')->assertUnauthorized();
+
+        $this->browserRequest('POST', '/api/login', [
+            ...$this->credentials(), 'email' => 'another@example.com',
+        ])->assertUnprocessable();
+    }
+
+    /** @return iterable<string, array{bool}> */
+    public static function accountExistence(): iterable
+    {
+        yield 'existing account' => [true];
+        yield 'unknown account' => [false];
     }
 
     public function test_authentication_fails_closed_when_valkey_is_unavailable(): void

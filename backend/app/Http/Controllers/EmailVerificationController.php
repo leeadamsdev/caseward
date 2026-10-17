@@ -12,6 +12,7 @@ use Illuminate\Auth\Events\Verified;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -66,10 +67,10 @@ class EmailVerificationController
             abort(response()->json([
                 'message' => 'We could not send your verification email. Please try again later.',
                 'code' => 'verification_email_unavailable',
-            ], 503));
+            ], 503)->header('Retry-After', (string) Config::integer('verification.resend_interval_seconds')));
         }
 
-        return response()->noContent();
+        return response()->noContent()->header('Retry-After', (string) Config::integer('verification.resend_interval_seconds'));
     }
 
     public function update(UpdateEmailRequest $request, SendVerificationEmail $verificationEmail): UserResource

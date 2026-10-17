@@ -2,19 +2,15 @@ import { Clock3, Mail, ShieldCheck, UserRound } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useFetcher, useNavigation, useRevalidator } from "react-router";
 import { SuccessMark } from "~/components/feedback/success-mark";
-import {
-    RateLimitNotice,
-    SubmitButton,
-} from "~/components/forms/form-feedback";
-import { useFormFeedback } from "~/components/forms/use-form-feedback";
-import { ButtonLink, Button } from "~/components/ui/button";
-import { Notice } from "~/components/ui/notice";
+import { ButtonLink } from "~/components/ui/button";
 import { AuthHeading } from "~/features/authentication/auth-shell";
 import { SignOutForm } from "~/features/authentication/sign-out-form";
 import type { VerificationResult } from "~/features/email-verification/verification";
 import type { User } from "~/features/authentication/session";
+import { ResendVerificationForm } from "./resend-verification-form";
+import { VerificationForm } from "./verification-form";
+import type { ResendResult } from "./verification";
 
-const noFields = [] as const;
 const recoveryScreens = {
     invalid: {
         title: "Link expired or invalid",
@@ -46,20 +42,11 @@ export function VerificationScreen({
     accountId: string;
 }) {
     const fetcher = useFetcher<VerificationResult>();
+    const resend = useFetcher<ResendResult>();
     const navigation = useNavigation();
     const revalidator = useRevalidator();
     const result = fetcher.data;
-    const pending = fetcher.state !== "idle";
     const headingRef = useRef<HTMLHeadingElement>(null);
-    const failure =
-        result?.status === "error" || result?.status === "rate-limited"
-            ? result
-            : undefined;
-    const { noticeRef, remaining, disabled } = useFormFeedback(
-        failure,
-        pending,
-        noFields,
-    );
     const status = verificationState(user, result, accountId);
 
     useEffect(() => {
@@ -117,83 +104,20 @@ export function VerificationScreen({
                     Continue to your account
                 </ButtonLink>
             ) : status === "confirm" ? (
-                <div className="mt-7">
-                    {!pending && result?.status === "error" && (
-                        <Notice
-                            ref={noticeRef}
-                            tabIndex={-1}
-                            tone="danger"
-                            role="alert"
-                            className="mb-5"
-                            title="We couldn’t verify your email."
-                        >
-                            <p>
-                                {result.reason === "expired"
-                                    ? "Your security token expired. Please try again."
-                                    : "Check your connection and try again. Your request may have reached us."}
-                            </p>
-                            <Button
-                                variant="ghost"
-                                disabled={
-                                    revalidator.state !== "idle" ||
-                                    navigation.state !== "idle"
-                                }
-                                onClick={() => {
-                                    void revalidator.revalidate();
-                                }}
-                                className="mt-2 px-2 py-1 text-destructive underline"
-                            >
-                                {revalidator.state !== "idle"
-                                    ? "Checking verification…"
-                                    : "Check verification status"}
-                            </Button>
-                        </Notice>
-                    )}
-                    {!pending && result?.status === "rate-limited" && (
-                        <RateLimitNotice
-                            ref={noticeRef}
-                            remaining={remaining}
-                        />
-                    )}
-                    <fetcher.Form
-                        method="post"
-                        aria-label="Verify email"
-                        aria-busy={pending}
-                        onSubmit={(event) => {
-                            if (
-                                disabled ||
-                                navigation.state !== "idle" ||
-                                revalidator.state !== "idle"
-                            )
-                                event.preventDefault();
-                        }}
-                    >
-                        <input type="hidden" name="intent" value="verify" />
-                        <fieldset
+                <VerificationForm fetcher={fetcher} path={path} />
+            ) : (
+                <>
+                    {status === "invalid" && !user.email_verified && (
+                        <ResendVerificationForm
+                            fetcher={resend}
+                            returnTo={path}
+                            variant="primary"
                             disabled={
-                                disabled ||
                                 navigation.state !== "idle" ||
                                 revalidator.state !== "idle"
                             }
-                        >
-                            <SubmitButton
-                                pending={pending}
-                                label="Verify email"
-                                pendingLabel="Verifying email…"
-                            />
-                        </fieldset>
-                    </fetcher.Form>
-                    <p className="sr-only" role="status">
-                        {pending ? "Verifying your email. Please wait." : ""}
-                    </p>
-                    <SignOutForm
-                        label="Switch account"
-                        returnTo={path}
-                        disabled={pending || revalidator.state !== "idle"}
-                    />
-                </div>
-            ) : (
-                <>
+                        />
+                    )}
                     {status === "account-mismatch" && (
                         <SignOutForm
                             label="Sign in with another account"
@@ -204,7 +128,8 @@ export function VerificationScreen({
                     <ButtonLink
                         to={user.email_verified ? "/account" : "/verify-email"}
                         variant={
-                            status === "account-mismatch"
+                            status === "account-mismatch" ||
+                            (status === "invalid" && !user.email_verified)
                                 ? "outline"
                                 : "primary"
                         }
@@ -214,7 +139,9 @@ export function VerificationScreen({
                             ? "Back to your account"
                             : "Back to verification"}
                     </ButtonLink>
-                    {status !== "account-mismatch" && <SignOutForm />}
+                    {status !== "account-mismatch" && (
+                        <SignOutForm disabled={resend.state !== "idle"} />
+                    )}
                 </>
             )}
         </div>

@@ -191,6 +191,12 @@ test("honours rate limits without losing entered credentials", async ({
     await expect(page.getByLabel("Password", { exact: true })).toBeDisabled();
     await page.clock.fastForward(4_000);
     await expect(
+        page.getByText("Too many attempts", { exact: true }),
+    ).toHaveCount(0);
+    await expect(
+        page.getByText("You can try again", { exact: true }),
+    ).toHaveCount(0);
+    await expect(
         page.getByRole("button", { name: "Sign in", exact: true }),
     ).toBeEnabled();
     await expect(page.getByLabel("Password", { exact: true })).toHaveValue(

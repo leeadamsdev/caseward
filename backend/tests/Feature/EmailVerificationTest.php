@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -253,6 +254,43 @@ class EmailVerificationTest extends TestCase
         $this->assertSame('alex@example.com', $user->refresh()->email);
     }
 
+    public function test_the_hourly_email_limit_still_applies_after_each_short_cooldown_expires(): void
+    {
+        Config::set('verification.resend_interval_seconds', 1);
+        $user = $this->login();
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            if ($attempt % 2 === 0) {
+                $this->browserRequest('POST', '/api/email/verification-notification')->assertNoContent();
+            } else {
+                $this->browserRequest('PATCH', '/api/email', ['email' => "corrected-{$attempt}@example.com"])
+                    ->assertOk();
+            }
+
+            Sleep::sleep(2);
+        }
+
+        Redis::purge();
+        $limited = $this->browserRequest('POST', '/api/email/verification-notification')->assertTooManyRequests();
+        $this->assertGreaterThan(3500, (int) $limited->headers->get('Retry-After'));
+        $this->browserRequest('PATCH', '/api/email', ['email' => 'blocked@example.com'])->assertTooManyRequests();
+        Notification::assertSentToTimes($user, VerifyEmail::class, 5);
+        $this->assertSame('corrected-3@example.com', $user->refresh()->email);
+    }
+
+    public function test_resend_cooldown_uses_the_same_policy_as_the_rate_limiter(): void
+    {
+        Config::set('verification.resend_interval_seconds', 7);
+        $user = $this->login();
+        $this->browserRequest('POST', '/api/email/verification-notification')
+            ->assertNoContent()->assertHeader('Retry-After', '7');
+        $limited = $this->browserRequest('POST', '/api/email/verification-notification')->assertTooManyRequests();
+        $retryAfter = (int) $limited->headers->get('Retry-After');
+        $this->assertGreaterThan(0, $retryAfter);
+        $this->assertLessThanOrEqual(7, $retryAfter);
+        Notification::assertSentToTimes($user, VerifyEmail::class, 1);
+    }
+
     public function test_verification_attempts_are_rate_limited(): void
     {
         $user = $this->login();
@@ -417,7 +455,7 @@ class EmailVerificationTest extends TestCase
         Exceptions::fake();
         Notification::shouldReceive('send')->once()->andThrow(new TransportException('Private provider diagnostic.'));
         $this->browserRequest('POST', '/api/email/verification-notification')
-            ->assertServiceUnavailable()->assertExactJson([
+            ->assertServiceUnavailable()->assertHeader('Retry-After', '60')->assertExactJson([
                 'message' => 'We could not send your verification email. Please try again later.',
                 'code' => 'verification_email_unavailable',
             ]);
@@ -440,14 +478,21 @@ class EmailVerificationTest extends TestCase
         Exceptions::assertReported(TransportException::class);
     }
 
-    public function test_a_real_verification_email_is_captured_by_mailpit_and_its_link_verifies_the_account(): void
+    #[DataProvider('mailpitDeliveries')]
+    public function test_a_real_verification_email_is_captured_by_mailpit_and_its_link_verifies_the_account(bool $resend): void
     {
         Notification::swap(new ChannelManager($this->app));
         Config::set('mail.default', 'smtp');
         $testId = bin2hex(random_bytes(16));
         $email = "verification-{$testId}@example.test";
-        $this->browserRequest('POST', '/api/register', [...$this->registration(), 'email' => $email])
-            ->assertCreated()->assertJsonPath('meta.verification_email_sent', true);
+        if ($resend) {
+            $this->login($this->createUser($email));
+            $this->browserRequest('POST', '/api/email/verification-notification')
+                ->assertNoContent()->assertHeader('Retry-After', '60');
+        } else {
+            $this->browserRequest('POST', '/api/register', [...$this->registration(), 'email' => $email])
+                ->assertCreated()->assertJsonPath('meta.verification_email_sent', true);
+        }
         $response = Http::timeout(5)->get('http://mailpit:8025/api/v1/search', ['query' => "to:{$email}"])->throw();
         $messages = $response->json('messages');
         $this->assertIsArray($messages);
@@ -473,6 +518,13 @@ class EmailVerificationTest extends TestCase
         } finally {
             Http::timeout(5)->delete('http://mailpit:8025/api/v1/messages', ['IDs' => [$id]])->throw();
         }
+    }
+
+    /** @return iterable<string, array{bool}> */
+    public static function mailpitDeliveries(): iterable
+    {
+        yield 'registration' => [false];
+        yield 'resend' => [true];
     }
 
     private function createUser(string $email = 'alex@example.com'): User

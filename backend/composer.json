@@ -11,7 +11,9 @@
         "ext-pdo_pgsql": "*",
         "ext-redis": "^6.3",
         "laravel/framework": "^13.17",
-        "laravel/sanctum": "^4.3"
+        "laravel/sanctum": "^4.3",
+        "symfony/brevo-mailer": "^8.1",
+        "symfony/http-client": "^8.1"
     },
     "require-dev": {
         "larastan/larastan": "^3.0",

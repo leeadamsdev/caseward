@@ -40,3 +40,11 @@ if ($config->get('cache.limiter') !== 'redis'
 ) {
     throw new LogicException('Refusing to run tests outside the isolated Valkey test database. Clear cached configuration with php artisan config:clear.');
 }
+
+if ($config->get('mail.default') !== 'array'
+    || $config->get('mail.mailers.smtp.host') !== 'mailpit'
+    || $config->get('mail.mailers.smtp.port') !== 1025
+    || ! in_array($config->get('mail.mailers.brevo.key'), [null, ''], true)
+) {
+    throw new LogicException('Refusing to run tests with external email delivery enabled. Clear cached configuration with php artisan config:clear.');
+}

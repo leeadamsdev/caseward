@@ -16,6 +16,12 @@
     <php>
         <env name="APP_ENV" value="testing" force="true"/>
         <env name="APP_KEY" value="base64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=" force="true"/>
+        <env name="MAIL_MAILER" value="array" force="true"/>
+        <env name="MAIL_HOST" value="mailpit" force="true"/>
+        <env name="MAIL_PORT" value="1025" force="true"/>
+        <env name="MAIL_FROM_ADDRESS" value="hello@caseward.test" force="true"/>
+        <env name="MAIL_FROM_NAME" value="Caseward" force="true"/>
+        <env name="BREVO_API_KEY" value="" force="true"/>
         <env name="SESSION_DRIVER" value="redis" force="true"/>
         <env name="SESSION_SECURE_COOKIE" value="false" force="true"/>
         <env name="CACHE_STORE" value="array" force="true"/>

@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
 
+test.beforeEach(async ({ page }) => {
+    await page.route("**/api/user", (route) =>
+        route.fulfill({ status: 401, json: { message: "Unauthenticated." } }),
+    );
+});
+
 test.afterEach(async ({ page }) => {
     expect(await page.pageErrors()).toEqual([]);
 });

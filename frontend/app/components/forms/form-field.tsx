@@ -1,39 +1,40 @@
 import { CircleAlert, Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button } from "~/components/ui/button";
 import { FeedbackReveal } from "~/components/ui/feedback-reveal";
 import { Input } from "~/components/ui/input";
-import type { RegistrationFieldName } from "./registration";
 
-export function RegistrationField({
+export function FormField({
     name,
     label,
     type,
     autoComplete,
     placeholder,
     errors,
+    labelAction,
+    visibilityLabel = "password",
 }: {
-    name: RegistrationFieldName;
+    name: string;
     label: string;
     type: "text" | "email" | "password";
     autoComplete: string;
     placeholder: string;
     errors: string[] | undefined;
+    labelAction?: ReactNode;
+    visibilityLabel?: string | undefined;
 }) {
     const [visible, setVisible] = useState(false);
     const password = type === "password";
-    const description = [
-        password ? "password-requirements" : "",
-        errors ? `${name}-errors` : "",
-    ]
-        .filter(Boolean)
-        .join(" ");
+    const description = errors ? `${name}-errors` : undefined;
 
     return (
         <div>
-            <label className="mb-2 block text-sm font-medium" htmlFor={name}>
-                {label}
-            </label>
+            <div className="mb-2 flex min-h-6 items-center gap-1.5">
+                <label className="text-sm font-medium" htmlFor={name}>
+                    {label}
+                </label>
+                {labelAction}
+            </div>
             <div className="relative">
                 <Input
                     id={name}
@@ -45,7 +46,7 @@ export function RegistrationField({
                     autoCapitalize="none"
                     spellCheck={false}
                     aria-invalid={Boolean(errors)}
-                    aria-describedby={description || undefined}
+                    aria-describedby={description}
                     className={password ? "pr-12" : undefined}
                 />
                 {password && (
@@ -53,7 +54,7 @@ export function RegistrationField({
                         type="button"
                         variant="ghost"
                         className="absolute inset-y-1 right-1 h-10 w-10 rounded-md"
-                        aria-label={`${visible ? "Hide" : "Show"} ${name === "password" ? "password" : "password confirmation"}`}
+                        aria-label={`${visible ? "Hide" : "Show"} ${visibilityLabel}`}
                         aria-pressed={visible}
                         aria-controls={name}
                         onClick={() => {

@@ -28,6 +28,16 @@ async function checkAccessibility(page: Page) {
 test.beforeEach(async ({ page }) => {
     // Every API call is explicitly fulfilled by its test; never create accounts in a developer database.
     await page.route("**/api/**", async (route) => {
+        if (
+            new URL(route.request().url()).pathname === "/api/user" &&
+            route.request().method() === "GET"
+        ) {
+            await route.fulfill({
+                status: 401,
+                json: { message: "Unauthenticated." },
+            });
+            return;
+        }
         await route.abort("blockedbyclient");
         throw new Error(`Unexpected API request: ${route.request().url()}`);
     });
@@ -49,6 +59,12 @@ test("shows the branded ready state and supports keyboard password visibility", 
     ).toBeVisible();
     await expect(
         page.getByText("15–128 characters", { exact: true }),
+    ).toHaveCount(0);
+    await expect(
+        page.getByRole("button", {
+            name: "Password requirements",
+            exact: true,
+        }),
     ).toBeVisible();
     await expect(
         page.getByRole("button", { name: "Create account", exact: true }),
@@ -76,9 +92,40 @@ test("shows the branded ready state and supports keyboard password visibility", 
     await expect(page.getByLabel("Password", { exact: true })).toHaveValue(
         account.password,
     );
+    await checkAccessibility(page);
+});
+
+test("opens password help on demand and restores keyboard focus", async ({
+    page,
+}) => {
+    const help = page.getByRole("button", {
+        name: "Password requirements",
+        exact: true,
+    });
+    const popup = page.getByRole("dialog", {
+        name: "Password requirements",
+        exact: true,
+    });
+    await page.getByLabel("Password", { exact: true }).fill(account.password);
+    await expect(help).toHaveAttribute("aria-expanded", "false");
+    await help.focus();
+    await page.keyboard.press("Enter");
+    await expect(popup).toBeVisible();
+    await expect(help).toHaveAttribute("aria-expanded", "true");
+    await expect(popup.getByRole("listitem")).toHaveCount(3);
+    await expect(popup).toContainText("15\u2013128 characters");
+    await expect(popup).toContainText(
+        "Spaces and Unicode characters are supported",
+    );
+    await expect(popup).toContainText(
+        "No mandatory uppercase, number, or symbol rules",
+    );
+    await expect(
+        page.getByRole("button", { name: "Close password help", exact: true }),
+    ).toBeFocused();
     // Browser-resolved colours cover color-mix backgrounds that axe cannot always evaluate.
     const guidanceContrast = await page
-        .locator("#password-requirements")
+        .getByRole("dialog", { name: "Password requirements", exact: true })
         .evaluate((element) => {
             const item = element.querySelector("li");
             const context = document.createElement("canvas").getContext("2d");
@@ -110,12 +157,73 @@ test("shows the branded ready state and supports keyboard password visibility", 
         });
     expect(guidanceContrast).toBeGreaterThanOrEqual(4.5);
     await checkAccessibility(page);
+    await page.keyboard.press("Escape");
+    await expect(popup).toBeHidden();
+    await expect(help).toBeFocused();
+    await help.click();
+    await page.getByLabel("Email address", { exact: true }).click();
+    await expect(popup).toBeHidden();
+    await expect(
+        page.getByLabel("Email address", { exact: true }),
+    ).toBeFocused();
+    await help.click();
+    await page
+        .getByRole("button", { name: "Close password help", exact: true })
+        .click();
+    await expect(popup).toBeHidden();
+    await expect(help).toBeFocused();
+    await expect(page.getByLabel("Password", { exact: true })).toHaveValue(
+        account.password,
+    );
+    await expect(page.getByRole("alert")).toHaveCount(0);
+});
+
+test.describe("password help on touch devices", () => {
+    test.use({ viewport: { width: 320, height: 640 }, hasTouch: true });
+
+    test("fits the viewport with larger text and respects reduced motion", async ({
+        page,
+    }) => {
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        await page.evaluate(() => {
+            document.documentElement.style.fontSize = "200%";
+        });
+        const help = page.getByRole("button", {
+            name: "Password requirements",
+            exact: true,
+        });
+        const popup = page.getByRole("dialog", {
+            name: "Password requirements",
+            exact: true,
+        });
+        await help.tap();
+        await expect(popup).toBeVisible();
+        const bounds = await popup.boundingBox();
+        expect(bounds).not.toBeNull();
+        expect(bounds?.x).toBeGreaterThanOrEqual(16);
+        expect((bounds?.x ?? 0) + (bounds?.width ?? 0)).toBeLessThanOrEqual(
+            304,
+        );
+        expect(
+            await page.evaluate(
+                () => document.documentElement.scrollWidth > innerWidth,
+            ),
+        ).toBe(false);
+        expect(await page.evaluate(() => document.getAnimations().length)).toBe(
+            0,
+        );
+        await checkAccessibility(page);
+        await page
+            .getByRole("button", { name: "Close password help", exact: true })
+            .tap();
+        await expect(popup).toBeHidden();
+    });
 });
 
 test("animates the background and respects reduced motion", async ({
     page,
 }) => {
-    const waves = page.locator(".registration-wave");
+    const waves = page.locator(".auth-wave");
     const initialTransform = await waves
         .first()
         .evaluate((element) => getComputedStyle(element).transform);
@@ -236,7 +344,7 @@ test("prevents duplicate submissions, preserves passwords and confirms the serve
     await expect(page.locator("input[type=password]")).toHaveCount(0);
     await expect(page.locator(":focus")).toHaveAttribute(
         "aria-labelledby",
-        "registration-title",
+        "auth-title",
     );
     const storage = await page.evaluate(() => ({
         local: Object.keys(localStorage),

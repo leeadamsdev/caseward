@@ -19,6 +19,21 @@ class ConfigurationTest extends TestCase
         $configuration = Config::all();
         Arr::set($configuration, $key, $value);
 
+        $this->assertCachedConfigurationRejected($configuration, "Refusing to run tests outside the isolated {$service} test database.");
+    }
+
+    #[DataProvider('unsafeMailConfigurations')]
+    public function test_unsafe_cached_mail_configuration_is_rejected_before_tests_start(string $key, string|int $value): void
+    {
+        $configuration = Config::all();
+        Arr::set($configuration, $key, $value);
+
+        $this->assertCachedConfigurationRejected($configuration, 'Refusing to run tests with external email delivery enabled.');
+    }
+
+    /** @param array<array-key, mixed> $configuration */
+    private function assertCachedConfigurationRejected(array $configuration, string $message): void
+    {
         $path = tempnam(storage_path('framework'), 'caseward-test-config-');
 
         if ($path === false) {
@@ -37,13 +52,20 @@ class ConfigurationTest extends TestCase
             $process->run();
 
             $this->assertFalse($process->isSuccessful());
-            $this->assertStringContainsString(
-                "Refusing to run tests outside the isolated {$service} test database.",
-                $process->getErrorOutput(),
-            );
+            $this->assertStringContainsString($message, $process->getErrorOutput());
         } finally {
             unlink($path);
         }
+    }
+
+    /** @return iterable<string, array{string, string|int}> */
+    public static function unsafeMailConfigurations(): iterable
+    {
+        yield 'local SMTP delivery' => ['mail.default', 'smtp'];
+        yield 'production delivery' => ['mail.default', 'brevo'];
+        yield 'production credentials' => ['mail.mailers.brevo.key', 'real-key-must-not-reach-tests'];
+        yield 'external SMTP host' => ['mail.mailers.smtp.host', 'smtp.example.test'];
+        yield 'wrong SMTP port' => ['mail.mailers.smtp.port', 465];
     }
 
     /** @return iterable<string, array{string, string|int, string}> */

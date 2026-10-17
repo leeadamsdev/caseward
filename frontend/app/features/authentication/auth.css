@@ -1,0 +1,111 @@
+.auth-page {
+    --wave-travel-x: 4%;
+    --wave-travel-y: 3%;
+    --wave-scale: 1.12;
+    background: var(--background);
+}
+
+@media (width < 40rem) {
+    .auth-page {
+        --wave-travel-x: 8%;
+        --wave-travel-y: 6%;
+        --wave-scale: 1.2;
+        --glow-violet-position: 100% 30%;
+        --glow-blue-position: 0% 70%;
+        --glow-strength: 12%;
+        --glow-travel-y: 10%;
+    }
+}
+
+.auth-page::before {
+    position: absolute;
+    z-index: -1;
+    inset: -15%;
+    pointer-events: none;
+    content: "";
+    background:
+        radial-gradient(
+            ellipse at var(--glow-violet-position, 90% 15%),
+            color-mix(
+                in srgb,
+                var(--brand-violet) var(--glow-strength, 7%),
+                transparent
+            ),
+            transparent 55%
+        ),
+        radial-gradient(
+            ellipse at var(--glow-blue-position, 10% 80%),
+            color-mix(
+                in srgb,
+                var(--brand-blue) var(--glow-strength, 6%),
+                transparent
+            ),
+            transparent 55%
+        );
+}
+
+.auth-wave {
+    transform-origin: center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .auth-card {
+        animation: auth-arrive 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .auth-result {
+        animation: auth-arrive 350ms ease-out both;
+    }
+
+    .auth-page::before {
+        animation: auth-glow 18s ease-in-out -6s infinite alternate;
+    }
+
+    .auth-wave-top {
+        animation: auth-wave 12s ease-in-out -3s infinite alternate;
+    }
+
+    .auth-wave-bottom {
+        animation: auth-wave 15s ease-in-out -6s infinite alternate-reverse;
+    }
+}
+
+@keyframes auth-arrive {
+    from {
+        opacity: 0;
+        transform: translateY(0.75rem);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes auth-glow {
+    from {
+        opacity: 0.6;
+        transform: translate(-6%, var(--glow-travel-y, 4%)) scale(1.08);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(6%, calc(-1 * var(--glow-travel-y, 4%)))
+            scale(1.08);
+    }
+}
+
+@keyframes auth-wave {
+    from {
+        transform: translate(
+                calc(-1 * var(--wave-travel-x)),
+                calc(-1 * var(--wave-travel-y))
+            )
+            scale(var(--wave-scale));
+    }
+
+    to {
+        transform: translate(var(--wave-travel-x), var(--wave-travel-y))
+            scale(var(--wave-scale));
+    }
+}

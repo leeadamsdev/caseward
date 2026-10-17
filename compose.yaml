@@ -40,6 +40,8 @@ services:
                 condition: service_healthy
             valkey:
                 condition: service_healthy
+            mailpit:
+                condition: service_healthy
         init: true
         healthcheck:
             test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8000/up') === false ? 1 : 0);"]
@@ -47,6 +49,23 @@ services:
             timeout: 5s
             retries: 5
             start_period: 120s
+
+    mailpit:
+        image: axllent/mailpit:v1.31.6
+        ports:
+            - "127.0.0.1:8025:8025"
+        volumes:
+            - mailpit_data:/data
+        environment:
+            MP_DATABASE: /data/mailpit.db
+            MP_MAX_AGE: 1d
+            MP_ALLOWED_HOSTS: localhost,127.0.0.1,mailpit
+            MP_SMTP_DISABLE_RDNS: "true"
+        healthcheck:
+            test: ["CMD", "/mailpit", "readyz"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
 
     valkey:
         image: valkey/valkey:9.1.2-trixie
@@ -77,5 +96,6 @@ services:
 volumes:
     frontend_node_modules:
     backend_vendor:
+    mailpit_data:
     valkey_data:
     postgres_data:

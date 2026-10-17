@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Links, Meta, Outlet, Scripts } from "react-router";
 import "~/app.css";
+import { AuthShell } from "~/features/authentication/auth-shell";
 
 export function meta() {
     return [{ title: "Caseward" }];
@@ -55,11 +56,15 @@ export default function App() {
 
 export function HydrateFallback() {
     return (
-        <main className="p-6">
-            <p className="text-muted-foreground" role="status">
+        <AuthShell titleId="loading-title">
+            <p
+                id="loading-title"
+                className="mt-6 text-center text-muted-foreground"
+                role="status"
+            >
                 Loading Caseward…
             </p>
-        </main>
+        </AuthShell>
     );
 }
 

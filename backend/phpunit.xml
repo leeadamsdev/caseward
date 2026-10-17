@@ -22,6 +22,7 @@
         <env name="MAIL_PORT" value="1025" force="true"/>
         <env name="MAIL_FROM_ADDRESS" value="hello@caseward.test" force="true"/>
         <env name="MAIL_FROM_NAME" value="Caseward" force="true"/>
+        <env name="MAIL_LOGO_URL" value="http://localhost:5173/logos/caseward-logo-light.png" force="true"/>
         <env name="BREVO_API_KEY" value="" force="true"/>
         <env name="SESSION_DRIVER" value="redis" force="true"/>
         <env name="SESSION_SECURE_COOKIE" value="false" force="true"/>

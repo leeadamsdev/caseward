@@ -13,6 +13,28 @@ use Tests\TestCase;
 
 class ConfigurationTest extends TestCase
 {
+    #[DataProvider('logoUrls')]
+    public function test_mail_logo_configuration_supports_a_public_override_and_defaults_for_unset_or_empty_values(?string $override, string $expected): void
+    {
+        $process = new Process(
+            [PHP_BINARY, '-r', 'require "vendor/autoload.php"; $config = require "config/mail.php"; echo $config["logo_url"];'],
+            base_path(),
+            ['APP_URL' => 'https://caseward.example.test/', 'MAIL_LOGO_URL' => $override ?? false],
+        );
+        $process->mustRun();
+
+        $this->assertSame($expected, $process->getOutput());
+    }
+
+    /** @return iterable<string, array{string|null, string}> */
+    public static function logoUrls(): iterable
+    {
+        $default = 'https://caseward.example.test/logos/caseward-logo-light.png';
+        yield 'unset' => [null, $default];
+        yield 'empty' => ['', $default];
+        yield 'public override' => ['https://images.example.test/logo.png', 'https://images.example.test/logo.png'];
+    }
+
     #[DataProvider('unsafeConfigurations')]
     public function test_unsafe_cached_configuration_is_rejected_before_tests_start(string $key, string|int $value, string $service): void
     {

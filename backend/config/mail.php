@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
+$frontend = rtrim((string) env('APP_URL', 'http://localhost:5173'), '/');
+
 return [
     'default' => env('MAIL_MAILER', 'smtp'),
+    'logo_url' => env('MAIL_LOGO_URL') ?: "{$frontend}/logos/caseward-logo-light.png",
     'mailers' => [
         'smtp' => [
             'transport' => 'smtp',

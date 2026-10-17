@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Mail\Message;
 use Illuminate\Mail\Transport\ArrayTransport;
 use Illuminate\Support\Facades\Config;
@@ -96,6 +97,45 @@ class MailTest extends TestCase
 
         $this->assertNotNull($message);
         $this->assertSame('<caseward-test@brevo.test>', $message->getMessageId());
+        $this->assertSame(1, $requests);
+    }
+
+    public function test_brevo_receives_the_branded_verification_html_plain_text_and_hosted_logo(): void
+    {
+        $requests = 0;
+        $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$requests): MockResponse {
+            $requests++;
+            $this->assertSame('POST', $method);
+            $this->assertSame('https://api.brevo.com/v3/smtp/email', $url);
+            $this->assertIsString($options['body']);
+            $body = json_decode($options['body'], true, flags: JSON_THROW_ON_ERROR);
+            $this->assertIsArray($body);
+            $this->assertSame('Verify your email | Caseward', $body['subject']);
+            $html = $body['htmlContent'];
+            $text = $body['textContent'];
+            $this->assertIsString($html);
+            $this->assertIsString($text);
+            $this->assertStringContainsString('src="https://images.example.test/caseward-logo-light.png"', $html);
+            $this->assertStringContainsString('expires in 1 hour', $html);
+            $this->assertStringContainsString('alex@example.test', $text);
+            $this->assertSame(1, preg_match('/href="([^"]*\/email\/verify\/[^\"]+)"/', $html, $matches));
+            $link = $matches[1] ?? null;
+            $this->assertIsString($link);
+            $this->assertStringContainsString(html_entity_decode($link, ENT_QUOTES | ENT_HTML5), $text);
+            $this->assertStringNotContainsString('cid:', $html);
+            $this->assertArrayNotHasKey('attachment', $body);
+            $this->assertSame([['email' => 'alex@example.test', 'contactPixelTrackingConsent' => false]], $body['to']);
+
+            return new MockResponse('{"messageId":"<caseward-verification@brevo.test>"}', ['http_code' => 201]);
+        });
+        $this->app->instance(HttpClientInterface::class, $client);
+        Config::set('mail.mailers.brevo.key', 'test-api-key');
+        Config::set('mail.default', 'brevo');
+        Config::set('mail.logo_url', 'https://images.example.test/caseward-logo-light.png');
+        $user = (new User(['email' => 'alex@example.test']))->forceFill(['id' => 42]);
+
+        $user->sendEmailVerificationNotification();
+
         $this->assertSame(1, $requests);
     }
 

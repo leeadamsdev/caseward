@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { checkAccessibility } from "./accessibility";
+import { mockBrowserSession, mockSignedInSession } from "./browser-session";
 
 const account = {
     name: "Alex Chen",
@@ -7,7 +8,19 @@ const account = {
     password: "  a long Unicode passphrase 🔐  ",
     password_confirmation: "  a long Unicode passphrase 🔐  ",
 };
-const created = { data: { id: 1, name: account.name, email: account.email } };
+const created = {
+    data: {
+        id: 1,
+        name: account.name,
+        email: account.email,
+        email_verified: false,
+    },
+    meta: { verification_email_sent: true },
+};
+
+async function registeredSession(page: Page) {
+    await mockSignedInSession(page, created.data);
+}
 
 async function fillRegistration(page: Page) {
     await page.getByLabel("Full name", { exact: true }).fill(account.name);
@@ -19,21 +32,7 @@ async function fillRegistration(page: Page) {
 }
 
 test.beforeEach(async ({ page }) => {
-    // Every API call is explicitly fulfilled by its test; never create accounts in a developer database.
-    await page.route("**/api/**", async (route) => {
-        if (
-            new URL(route.request().url()).pathname === "/api/user" &&
-            route.request().method() === "GET"
-        ) {
-            await route.fulfill({
-                status: 401,
-                json: { message: "Unauthenticated." },
-            });
-            return;
-        }
-        await route.abort("blockedbyclient");
-        throw new Error(`Unexpected API request: ${route.request().url()}`);
-    });
+    await mockBrowserSession(page);
     await page.goto("/register");
 });
 
@@ -305,9 +304,11 @@ test("prevents duplicate submissions, preserves passwords and confirms the serve
     await page.route("**/api/register", async (route) => {
         requests++;
         expect(route.request().method()).toBe("POST");
+        expect(route.request().headers()["x-xsrf-token"]).toBe("test=token");
         const payload: unknown = route.request().postDataJSON();
         expect(payload).toEqual(account);
         await pending;
+        await registeredSession(page);
         await route.fulfill({ status: 201, json: created });
     });
     await fillRegistration(page);
@@ -325,20 +326,14 @@ test("prevents duplicate submissions, preserves passwords and confirms the serve
     expect(requests).toBe(1);
     release?.();
     await expect(
-        page.getByRole("heading", { name: "Account created", exact: true }),
+        page.getByRole("heading", { name: "Check your email", exact: true }),
     ).toBeVisible();
     await expect(page.getByText(account.email, { exact: true })).toBeVisible();
-    await expect(
-        page.getByText(
-            /you’re not signed in yet and no workspace has been created/,
-        ),
-    ).toBeVisible();
-    await expect(page.getByRole("form")).toHaveCount(0);
+    await expect(page).toHaveURL("/verify-email");
     await expect(page.locator("input[type=password]")).toHaveCount(0);
-    await expect(page.locator(":focus")).toHaveAttribute(
-        "aria-labelledby",
-        "auth-title",
-    );
+    await expect(
+        page.getByRole("heading", { name: "Check your email", exact: true }),
+    ).toBeFocused();
     const storage = await page.evaluate(() => ({
         local: Object.keys(localStorage),
         session: Object.keys(sessionStorage),
@@ -381,6 +376,7 @@ test("renders backend validation, retains values and recovers after correction",
         account.password,
     );
     await page.route("**/api/register", async (route) => {
+        await registeredSession(page);
         await route.fulfill({ status: 201, json: created });
     });
     await page
@@ -390,7 +386,7 @@ test("renders backend validation, retains values and recovers after correction",
         .getByRole("button", { name: "Create account", exact: true })
         .click();
     await expect(
-        page.getByRole("heading", { name: "Account created", exact: true }),
+        page.getByRole("heading", { name: "Check your email", exact: true }),
     ).toBeVisible();
     // The confirmation uses the validated response, rather than echoing the submitted address.
     await expect(page.getByText(account.email, { exact: true })).toBeVisible();
@@ -442,13 +438,17 @@ for (const header of ["seconds", "date", "missing"]) {
             account.password,
         );
         await page.route("**/api/register", async (route) => {
+            await registeredSession(page);
             await route.fulfill({ status: 201, json: created });
         });
         await page
             .getByRole("button", { name: "Create account", exact: true })
             .click();
         await expect(
-            page.getByRole("heading", { name: "Account created", exact: true }),
+            page.getByRole("heading", {
+                name: "Check your email",
+                exact: true,
+            }),
         ).toBeVisible();
     });
 }
@@ -507,13 +507,17 @@ for (const failure of [
                 "may still have reached us",
             );
         await page.route("**/api/register", async (route) => {
+            await registeredSession(page);
             await route.fulfill({ status: 201, json: created });
         });
         await page
             .getByRole("button", { name: "Create account", exact: true })
             .click();
         await expect(
-            page.getByRole("heading", { name: "Account created", exact: true }),
+            page.getByRole("heading", {
+                name: "Check your email",
+                exact: true,
+            }),
         ).toBeVisible();
     });
 }
@@ -573,9 +577,10 @@ test("works at narrow widths and increased zoom without horizontal scrolling", a
     ).toBe(false);
     const longEmail = `${"a".repeat(64)}@${"b".repeat(63)}.${"c".repeat(63)}.example.com`;
     await page.route("**/api/register", async (route) => {
+        await mockSignedInSession(page, { ...created.data, email: longEmail });
         await route.fulfill({
             status: 201,
-            json: { data: { ...created.data, email: longEmail } },
+            json: { ...created, data: { ...created.data, email: longEmail } },
         });
     });
     await fillRegistration(page);
@@ -583,7 +588,7 @@ test("works at narrow widths and increased zoom without horizontal scrolling", a
         .getByRole("button", { name: "Create account", exact: true })
         .click();
     await expect(
-        page.getByRole("heading", { name: "Account created", exact: true }),
+        page.getByRole("heading", { name: "Check your email", exact: true }),
     ).toBeVisible();
     await expect(page.getByText(longEmail, { exact: true })).toBeVisible();
     expect(

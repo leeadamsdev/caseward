@@ -1,5 +1,4 @@
 import { useFetcher } from "react-router";
-import { ButtonLink } from "~/components/ui/button";
 import { FormField } from "~/components/forms/form-field";
 import { useFormFeedback } from "~/components/forms/use-form-feedback";
 import {
@@ -12,7 +11,6 @@ import {
 } from "~/features/authentication/auth-shell";
 import { Notice } from "~/components/ui/notice";
 import { registrationFields, type RegistrationResult } from "./registration";
-import { SuccessMark } from "./success-mark";
 import { PasswordHelp } from "./password-help";
 
 export function RegistrationForm() {
@@ -24,44 +22,6 @@ export function RegistrationForm() {
         pending,
         registrationFields,
     );
-
-    if (result?.status === "created") {
-        return (
-            <div
-                ref={noticeRef}
-                tabIndex={-1}
-                className="auth-result rounded-lg text-center outline-none"
-                aria-labelledby="auth-title"
-            >
-                <SuccessMark />
-                <h1
-                    id="auth-title"
-                    className="text-2xl font-semibold tracking-tight"
-                >
-                    Account created
-                </h1>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    Your Caseward account has been created
-                    <span className="block">
-                        for{" "}
-                        <strong className="font-semibold wrap-anywhere text-foreground">
-                            {result.email}
-                        </strong>
-                        .
-                    </span>
-                </p>
-                <Notice title="You’re all set!" className="mt-7 text-left">
-                    <p className="leading-6 text-accent-foreground/80">
-                        Your account has been created, but you’re not signed in
-                        yet and no workspace has been created.
-                    </p>
-                </Notice>
-                <ButtonLink to="/login" className="mt-6 w-full">
-                    Continue to sign in
-                </ButtonLink>
-            </div>
-        );
-    }
 
     return (
         <>
@@ -87,9 +47,11 @@ export function RegistrationForm() {
                     className="mb-5"
                 >
                     <p className="leading-5">
-                        {result.reason === "network"
-                            ? "Check your connection and try again. Your previous request may still have reached us."
-                            : "Please try again in a moment. Your details have been kept."}
+                        {result.reason === "expired"
+                            ? "Your security token expired. Submit the form again to refresh it."
+                            : result.reason === "network"
+                              ? "Check your connection and try again. Your previous request may still have reached us."
+                              : "Please try again in a moment. Your details have been kept."}
                     </p>
                 </Notice>
             )}

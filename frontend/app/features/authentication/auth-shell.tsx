@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import { useLocation } from "react-router";
 import { ButtonLink } from "~/components/ui/button";
 import "./auth.css";
@@ -29,15 +29,19 @@ export function AuthShell({ children }: { children: ReactNode }) {
 export function AuthHeading({
     title,
     description,
+    ref,
 }: {
     title: string;
     description: string;
+    ref?: Ref<HTMLHeadingElement>;
 }) {
     return (
         <header className="mt-5 mb-7 text-center">
             <h1
+                ref={ref}
                 id="auth-title"
-                className="text-2xl font-semibold tracking-tight"
+                tabIndex={ref ? -1 : undefined}
+                className="text-2xl font-semibold tracking-tight wrap-anywhere outline-none"
             >
                 {title}
             </h1>

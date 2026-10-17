@@ -1,10 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { checkAccessibility } from "./accessibility";
+import { mockBrowserSession } from "./browser-session";
 
 test.beforeEach(async ({ page }) => {
-    await page.route("**/api/user", (route) =>
-        route.fulfill({ status: 401, json: { message: "Unauthenticated." } }),
-    );
+    await mockBrowserSession(page);
 });
 
 test.afterEach(async ({ page }) => {
@@ -116,7 +115,7 @@ test("explains a longer session check and finishes loading when it completes", a
     const session = new Promise<void>((resolve) => {
         resume = resolve;
     });
-    await page.route("**/api/user", async (route) => {
+    await page.route("**/api/session", async (route) => {
         await session;
         await route.fulfill({
             status: 401,
@@ -154,7 +153,7 @@ test("keeps loading and missing-page motion accessible on small screens", async 
     const session = new Promise<void>((resolve) => {
         resume = resolve;
     });
-    await page.route("**/api/user", async (route) => {
+    await page.route("**/api/session", async (route) => {
         await session;
         await route.fulfill({
             status: 401,
@@ -218,7 +217,7 @@ test("keeps the loading heading stable while the font downloads", async ({
         await font;
         await route.continue();
     });
-    await page.route("**/api/user", async (route) => {
+    await page.route("**/api/session", async (route) => {
         await session;
         await route.fulfill({
             status: 401,
@@ -267,7 +266,7 @@ test("animates the shared waves on loading and missing pages at different widths
     const session = new Promise<void>((resolve) => {
         resume = resolve;
     });
-    await page.route("**/api/user", async (route) => {
+    await page.route("**/api/session", async (route) => {
         await session;
         await route.fulfill({
             status: 401,
@@ -321,7 +320,7 @@ test("keeps the same wave animations when loading hands over to the page", async
     const session = new Promise<void>((resolve) => {
         resume = resolve;
     });
-    await page.route("**/api/user", async (route) => {
+    await page.route("**/api/session", async (route) => {
         await session;
         await route.fulfill({
             status: 401,

@@ -1,11 +1,8 @@
-import { useEffect, useRef } from "react";
-import { useFetcher } from "react-router";
-import { SubmitButton } from "~/components/forms/form-feedback";
-import { Notice } from "~/components/ui/notice";
+import { Check } from "lucide-react";
 import { AuthHeading, AuthShell } from "~/features/authentication/auth-shell";
 import { accountLoader, signOut } from "~/features/authentication/session";
 import { SessionError } from "~/features/authentication/session-error";
-import type { ApiFailure } from "~/lib/api";
+import { SignOutForm } from "~/features/authentication/sign-out-form";
 import type { Route } from "./+types/account";
 
 export const clientLoader = accountLoader;
@@ -15,13 +12,6 @@ export function meta() {
 }
 
 export default function Account({ loaderData }: Route.ComponentProps) {
-    const fetcher = useFetcher<ApiFailure>();
-    const noticeRef = useRef<HTMLDivElement>(null);
-    const pending = fetcher.state !== "idle";
-    useEffect(() => {
-        if (!pending && fetcher.data) noticeRef.current?.focus();
-    }, [pending, fetcher.data]);
-
     return (
         <AuthShell>
             {loaderData.status === "error" ? (
@@ -46,40 +36,16 @@ export default function Account({ loaderData }: Route.ComponentProps) {
                             <dd className="mt-1 font-medium wrap-anywhere">
                                 {loaderData.user.email}
                             </dd>
+                            <dd className="mt-2 inline-flex items-center gap-1 rounded-full bg-success-surface px-2 py-1 text-xs font-medium text-success">
+                                <Check
+                                    className="size-3.5"
+                                    aria-hidden="true"
+                                />
+                                Email verified
+                            </dd>
                         </div>
                     </dl>
-                    {!pending && fetcher.data && (
-                        <Notice
-                            ref={noticeRef}
-                            tabIndex={-1}
-                            tone="danger"
-                            role="alert"
-                            className="mt-5"
-                            title="We couldn’t confirm you were signed out."
-                        >
-                            <p>Check your connection and try again.</p>
-                        </Notice>
-                    )}
-                    <fetcher.Form
-                        method="post"
-                        aria-label="Sign out"
-                        aria-busy={pending}
-                        className="mt-6"
-                        onSubmit={(event) => {
-                            if (pending) event.preventDefault();
-                        }}
-                    >
-                        <fieldset disabled={pending}>
-                            <SubmitButton
-                                pending={pending}
-                                label="Sign out"
-                                pendingLabel="Signing out…"
-                            />
-                        </fieldset>
-                    </fetcher.Form>
-                    <p className="sr-only" role="status">
-                        {pending ? "Signing you out. Please wait." : ""}
-                    </p>
+                    <SignOutForm variant="primary" />
                 </>
             )}
         </AuthShell>

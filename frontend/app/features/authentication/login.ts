@@ -1,4 +1,5 @@
 import { redirect } from "react-router";
+import { verificationPath } from "~/features/email-verification/links";
 import {
     rateLimit,
     requiredFields,
@@ -37,7 +38,12 @@ export async function signIn(
     if (Object.keys(errors).length > 0) return { status: "validation", errors };
     const response = await sessionPost(request, "/api/login", values);
     if (!(response instanceof Response)) return response;
-    if (response.status === 204) return redirect("/account");
+    if (response.status === 204)
+        return redirect(
+            verificationPath(
+                new URL(request.url).searchParams.get("returnTo"),
+            ) ?? "/account",
+        );
     if (response.status === 429) return rateLimit(response);
     if (response.status === 419) return { status: "error", reason: "expired" };
     if (response.status === 422) {

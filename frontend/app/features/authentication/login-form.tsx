@@ -6,12 +6,14 @@ import {
 } from "~/components/forms/form-feedback";
 import { useFormFeedback } from "~/components/forms/use-form-feedback";
 import { Notice } from "~/components/ui/notice";
+import { verificationPath } from "~/features/email-verification/links";
 import { AuthHeading, AuthNavigation } from "./auth-shell";
 import { loginFields, type LoginResult } from "./login";
 
 export function LoginForm() {
     const fetcher = useFetcher<LoginResult>();
     const [params] = useSearchParams();
+    const returnTo = verificationPath(params.get("returnTo"));
     const pending = fetcher.state !== "idle";
     const result = fetcher.data;
     const { formRef, noticeRef, remaining, errors, disabled } = useFormFeedback(
@@ -29,7 +31,15 @@ export function LoginForm() {
             <div className="sr-only" role="status">
                 {pending ? "Signing you in. Please wait." : ""}
             </div>
-            {!result && params.get("reason") === "session" && (
+            {!result && returnTo && (
+                <Notice className="mb-5">
+                    <p>
+                        Sign in to the account this link was sent to. We’ll
+                        bring you back to verify your email.
+                    </p>
+                </Notice>
+            )}
+            {!result && !returnTo && params.get("reason") === "session" && (
                 <Notice className="mb-5">
                     <p>
                         Please sign in to continue. Your session may have

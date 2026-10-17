@@ -1,7 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
 import { checkAccessibility } from "./accessibility";
+import { mockBrowserSession, mockSignedInSession } from "./browser-session";
 
-const user = { id: 7, name: "Alex Chen", email: "alex.chen@example.com" };
+const user = {
+    id: 7,
+    name: "Alex Chen",
+    email: "alex.chen@example.com",
+    email_verified: true,
+};
 const password = "  a long Unicode passphrase 🔐  ";
 
 async function fillLogin(page: Page) {
@@ -10,34 +16,11 @@ async function fillLogin(page: Page) {
 }
 
 async function authenticatedSession(page: Page) {
-    await page.route("**/api/user", (route) =>
-        route.fulfill({ json: { data: user } }),
-    );
+    await mockSignedInSession(page, user);
 }
 
 test.beforeEach(async ({ page }) => {
-    await page.route("**/api/**", async (route) => {
-        if (
-            new URL(route.request().url()).pathname === "/api/user" &&
-            route.request().method() === "GET"
-        ) {
-            await route.fulfill({
-                status: 401,
-                json: { message: "Unauthenticated." },
-            });
-            return;
-        }
-        await route.abort("blockedbyclient");
-        throw new Error(`Unexpected API request: ${route.request().url()}`);
-    });
-    await page.route("**/sanctum/csrf-cookie", (route) =>
-        route.fulfill({
-            status: 204,
-            headers: {
-                "Set-Cookie": "XSRF-TOKEN=test%3Dtoken; Path=/; SameSite=Lax",
-            },
-        }),
-    );
+    await mockBrowserSession(page);
 });
 
 test.afterEach(async ({ page }) => {
@@ -173,7 +156,7 @@ test("signs in once, restores the session on reload, guards guest pages and sign
     await page.route("**/api/logout", async (route) => {
         expect(route.request().method()).toBe("POST");
         expect(route.request().headers()["x-xsrf-token"]).toBe("test=token");
-        await page.unroute("**/api/user");
+        await page.unroute("**/api/session");
         await route.fulfill({ status: 204 });
     });
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
@@ -185,26 +168,6 @@ test("signs in once, restores the session on reload, guards guest pages and sign
             "Please sign in to continue. Your session may have expired.",
         ),
     ).toBeVisible();
-    await expect(page.getByLabel("Password", { exact: true })).toHaveValue("");
-});
-
-test("registration success offers a working sign-in destination", async ({
-    page,
-}) => {
-    await page.route("**/api/register", (route) =>
-        route.fulfill({ status: 201, json: { data: user } }),
-    );
-    await page.goto("/register");
-    await page.getByLabel("Full name", { exact: true }).fill(user.name);
-    await fillLogin(page);
-    await page.getByLabel("Confirm password", { exact: true }).fill(password);
-    await page
-        .getByRole("button", { name: "Create account", exact: true })
-        .click();
-    await page
-        .getByRole("link", { name: "Continue to sign in", exact: true })
-        .click();
-    await expect(page).toHaveURL("/login");
     await expect(page.getByLabel("Password", { exact: true })).toHaveValue("");
 });
 
@@ -312,7 +275,7 @@ for (const path of ["/login", "/account"]) {
     test(`does not confuse a failed session check with being signed out at ${path}`, async ({
         page,
     }) => {
-        await page.route("**/api/user", (route) =>
+        await page.route("**/api/session", (route) =>
             route.fulfill({ status: 503, json: {} }),
         );
         await page.goto(path);
@@ -326,7 +289,7 @@ for (const path of ["/login", "/account"]) {
         await expect(page.getByLabel("Password", { exact: true })).toHaveCount(
             0,
         );
-        await page.unroute("**/api/user");
+        await page.unroute("**/api/session");
         await page
             .getByRole("button", { name: "Try again", exact: true })
             .click();
@@ -350,7 +313,7 @@ test("keeps sign-out failures recoverable and handles a session expiring", async
         page.getByRole("button", { name: "Sign out", exact: true }),
     ).toBeEnabled();
     await expect(page.getByText(user.email, { exact: true })).toBeVisible();
-    await page.unroute("**/api/user");
+    await page.unroute("**/api/session");
     await page.reload();
     await expect(page).toHaveURL("/login?reason=session");
 });
@@ -359,7 +322,7 @@ for (const failure of ["network", "malformed"]) {
     test(`recovers from a ${failure} session response without exposing account data`, async ({
         page,
     }) => {
-        await page.route("**/api/user", async (route) => {
+        await page.route("**/api/session", async (route) => {
             if (failure === "network") await route.abort("failed");
             else
                 await route.fulfill({
@@ -403,7 +366,7 @@ test("refuses a session mutation when the CSRF cookie is missing", async ({
 test("treats an already expired session as signed out", async ({ page }) => {
     await authenticatedSession(page);
     await page.route("**/api/logout", async (route) => {
-        await page.unroute("**/api/user");
+        await page.unroute("**/api/session");
         await route.fulfill({
             status: 401,
             json: { message: "Unauthenticated." },

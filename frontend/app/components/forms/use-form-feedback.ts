@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { FormErrors, FormFailure } from "~/lib/api";
 
 export function useFormFeedback<Field extends string>(
-    result: FormFailure<Field> | { status: "created" } | undefined,
+    result: FormFailure<Field> | undefined,
     pending: boolean,
     fields: readonly { name: Field }[],
 ) {

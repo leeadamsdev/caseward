@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
 import type { CSSProperties } from "react";
+import "./success-mark.css";
 
 type ConfettiStyle = CSSProperties &
     Record<"--confetti-x" | "--confetti-y" | "--confetti-turn", string>;
@@ -16,15 +17,20 @@ const pieces: ConfettiStyle[] = Array.from({ length: 16 }, (_, index) => {
     };
 });
 
-export function SuccessMark() {
+export function SuccessMark({ celebrate = true }: { celebrate?: boolean }) {
     return (
         <div
             className="relative mx-auto my-8 flex size-20 items-center justify-center rounded-full bg-success-surface text-success"
             aria-hidden="true"
         >
-            {pieces.map((style, index) => (
-                <span key={index} className="success-confetti" style={style} />
-            ))}
+            {celebrate &&
+                pieces.map((style, index) => (
+                    <span
+                        key={index}
+                        className="success-confetti"
+                        style={style}
+                    />
+                ))}
             <Check className="relative size-11" strokeWidth={2.5} />
         </div>
     );

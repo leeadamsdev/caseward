@@ -1,13 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import { checkAccessibility } from "./accessibility";
+import { mockBrowserSession } from "./browser-session";
 
 const fault = "Controlled route render failure: private diagnostic";
 const loginModule = "**/assets/login-main-*.js";
 
 async function openErrorPage(page: Page) {
-    await page.route("**/api/user", (route) =>
-        route.fulfill({ status: 401, json: { message: "Unauthenticated." } }),
-    );
+    await mockBrowserSession(page);
     // Replace only the browser's route module to exercise the real root boundary.
     await page.route(loginModule, (route) =>
         route.fulfill({

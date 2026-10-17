@@ -417,6 +417,35 @@ for (const failure of [
     });
 }
 
+test.describe("mobile validation", () => {
+    test.use({ viewport: { width: 390, height: 844 } });
+
+    test("keeps the card unclipped when focusing an error", async ({
+        page,
+    }) => {
+        await page.route("**/api/register", async (route) => {
+            await route.fulfill({
+                status: 422,
+                json: { errors: { email: ["Enter a valid email address."] } },
+            });
+        });
+        await fillRegistration(page);
+        await page
+            .getByRole("button", { name: "Create account", exact: true })
+            .click();
+
+        await expect(
+            page.getByLabel("Email address", { exact: true }),
+        ).toBeFocused();
+        await expect(page.getByRole("alert")).toBeVisible();
+        expect(
+            await page
+                .getByRole("main")
+                .evaluate((element) => [element.scrollLeft, element.scrollTop]),
+        ).toEqual([0, 0]);
+    });
+});
+
 test("works at narrow widths and increased zoom without horizontal scrolling", async ({
     page,
 }) => {

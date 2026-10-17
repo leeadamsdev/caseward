@@ -8,6 +8,8 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 
+use function is_string;
+
 class RegisterRequest extends FormRequest
 {
     /** @return array<string, list<Password|string>> */

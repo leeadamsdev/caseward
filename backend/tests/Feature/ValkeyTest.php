@@ -6,7 +6,6 @@ namespace Tests\Feature;
 
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Exceptions;
@@ -85,7 +84,7 @@ class ValkeyTest extends TestCase
     public function test_rate_limits_recover_after_the_real_window_expires(): void
     {
         RateLimiter::for('expiry-test', fn (): Limit => Limit::perSecond(1));
-        Route::get('/rate-limit-expiry-test', fn (): Response => response()->noContent())
+        Route::get('/rate-limit-expiry-test', response()->noContent(...))
             ->middleware('throttle:expiry-test');
 
         $this->getJson('/rate-limit-expiry-test')->assertNoContent();

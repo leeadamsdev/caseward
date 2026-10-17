@@ -27,6 +27,10 @@ if (! $app->environment('testing')
 $redisPrefix = $config->get('database.redis.options.prefix');
 
 if ($config->get('cache.limiter') !== 'redis'
+    || $config->get('session.driver') !== 'redis'
+    || $config->get('session.store') !== 'redis'
+    || $config->get('session.connection') !== 'default'
+    || $config->get('session.block_store') !== 'redis'
     || $config->get('database.redis.client') !== 'phpredis'
     || $config->get('database.redis.default.database') !== 1
     || $config->get('database.redis.default.username') !== 'caseward_testing'

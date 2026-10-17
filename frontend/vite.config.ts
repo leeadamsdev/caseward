@@ -3,6 +3,11 @@ import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
+const backendProxy = {
+    target: process.env.API_PROXY_TARGET ?? "http://127.0.0.1:8000",
+    changeOrigin: true,
+};
+
 export default defineConfig({
     plugins: [tailwindcss(), reactRouter()],
     resolve: {
@@ -13,10 +18,8 @@ export default defineConfig({
     server: {
         strictPort: true,
         proxy: {
-            "/api": {
-                target: process.env.API_PROXY_TARGET ?? "http://127.0.0.1:8000",
-                changeOrigin: true,
-            },
+            "/api": backendProxy,
+            "/sanctum/csrf-cookie": backendProxy,
         },
     },
     preview: {

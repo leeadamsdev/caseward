@@ -13,7 +13,7 @@ export function clientAction({ request }: Route.ClientActionArgs) {
 
 export default function Register() {
     return (
-        <main className="registration-page relative isolate flex min-h-svh items-center justify-center overflow-hidden px-4 py-8 sm:px-6 sm:py-12">
+        <main className="registration-page relative isolate flex min-h-svh items-center justify-center overflow-clip px-4 py-8 sm:px-6 sm:py-12">
             <svg
                 className="pointer-events-none absolute inset-0 -z-10 size-full text-brand-blue/8"
                 viewBox="0 0 1440 1000"

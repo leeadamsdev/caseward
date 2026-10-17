@@ -15,7 +15,7 @@ abstract class TestCase extends LaravelTestCase
         $app = parent::createApplication();
         $testId = bin2hex(random_bytes(16));
 
-        // Expiring rate-limit keys stay isolated without flushing shared state.
+        // Expiring Valkey keys stay isolated without flushing shared state.
         $app->make(Repository::class)->set(
             'database.redis.options.prefix',
             "caseward_testing:{$testId}:",

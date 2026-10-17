@@ -55,6 +55,10 @@ class ConfigurationTest extends TestCase
         yield 'development database role' => ['database.connections.pgsql.username', 'caseward', 'PostgreSQL'];
         yield 'database URL override' => ['database.connections.pgsql.url', 'pgsql://caseward:caseward_local@postgres:5432/caseward', 'PostgreSQL'];
         yield 'in-memory limiter' => ['cache.limiter', 'array', 'Valkey'];
+        yield 'in-memory sessions' => ['session.driver', 'array', 'Valkey'];
+        yield 'file-backed session store' => ['session.store', 'file', 'Valkey'];
+        yield 'file-backed session locks' => ['session.block_store', 'file', 'Valkey'];
+        yield 'wrong session connection' => ['session.connection', 'development', 'Valkey'];
         yield 'wrong Redis client' => ['database.redis.client', 'predis', 'Valkey'];
         yield 'development Valkey database' => ['database.redis.default.database', 0, 'Valkey'];
         yield 'development Valkey user' => ['database.redis.default.username', 'caseward', 'Valkey'];

@@ -10,7 +10,8 @@
         "ext-pdo": "*",
         "ext-pdo_pgsql": "*",
         "ext-redis": "^6.3",
-        "laravel/framework": "^13.17"
+        "laravel/framework": "^13.17",
+        "laravel/sanctum": "^4.3"
     },
     "require-dev": {
         "larastan/larastan": "^3.0",

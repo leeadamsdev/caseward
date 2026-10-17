@@ -1,0 +1,52 @@
+services:
+    frontend:
+        image: caseward-e2e-frontend
+        build:
+            target: browser-tests
+            args:
+                PLAYWRIGHT_VERSION: ${PLAYWRIGHT_VERSION:?Use the frontend test:e2e command}
+        ports: !reset []
+        environment:
+            CASEWARD_E2E: "1"
+            CI: "true"
+
+    backend:
+        image: caseward-e2e-backend
+        ports: !reset []
+        volumes:
+            - ./backend/.env.example:/var/www/app/.env:ro
+        tmpfs:
+            - /var/www/app/storage:uid=${APP_UID:-1000},gid=${APP_GID:-1000},mode=0755
+            - /var/www/app/bootstrap/cache:uid=${APP_UID:-1000},gid=${APP_GID:-1000},mode=0755
+        environment:
+            APP_ENV: e2e
+            APP_DEBUG: "false"
+            APP_KEY: base64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+            APP_URL: http://127.0.0.1:4173
+            SANCTUM_STATEFUL_DOMAINS: 127.0.0.1:4173,localhost:4173
+            DB_CONNECTION: pgsql
+            DB_HOST: postgres
+            DB_PORT: "5432"
+            DB_DATABASE: caseward_testing
+            DB_USERNAME: caseward_testing
+            DB_PASSWORD: caseward_testing_local
+            DB_URL: ""
+            REDIS_HOST: valkey
+            REDIS_PORT: "6379"
+            REDIS_USERNAME: caseward_testing
+            REDIS_PASSWORD: caseward_testing_local
+            REDIS_DB: "1"
+            REDIS_PREFIX: "caseward_testing:e2e:"
+            REDIS_URL: ""
+            SESSION_DRIVER: redis
+            SESSION_SECURE_COOKIE: "false"
+            CACHE_STORE: redis
+            MAIL_MAILER: smtp
+            MAIL_HOST: mailpit
+            MAIL_PORT: "1025"
+            MAIL_FROM_ADDRESS: hello@caseward.test
+            MAIL_LOGO_URL: http://127.0.0.1:4173/logos/caseward-logo-light.png
+            BREVO_API_KEY: ""
+
+    mailpit:
+        ports: !reset []

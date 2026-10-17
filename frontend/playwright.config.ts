@@ -2,6 +2,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
     testDir: "./tests",
+    testIgnore: "**/e2e/**",
     forbidOnly: Boolean(process.env.CI),
     fullyParallel: true,
     workers: 2,

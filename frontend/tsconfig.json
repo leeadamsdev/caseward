@@ -12,6 +12,7 @@
         "types": ["node", "vite/client"],
         "module": "ESNext",
         "moduleResolution": "bundler",
+        "allowImportingTsExtensions": true,
         "paths": {
             "~/*": ["./app/*"]
         },

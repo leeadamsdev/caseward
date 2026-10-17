@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Caseward">
+<defs><linearGradient id="cwBlue" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox"><stop offset="0" stop-color="#179BFC"/><stop offset="0.42" stop-color="#3779FA"/><stop offset="1" stop-color="#7954F7"/></linearGradient><clipPath id="cwClip"><path d="M 57 13 C 64 9 70 9 77 13 L 112 34 C 121 40 122 49 114 55 L 103 62 C 98 65 95 65 90 62 L 74 52 C 68 48 65 49 60 52 L 48 60 C 44 62 43 65 43 69 C 43 73 44 76 48 78 L 61 86 C 66 90 70 91 75 87 L 90 77 C 95 74 99 74 104 77 L 114 84 C 122 89 121 99 113 105 L 77 126 C 69 131 64 131 56 126 L 17 104 C 10 100 8 95 8 87 L 8 49 C 8 43 11 39 17 35 Z"/></clipPath></defs>
+<rect width="64" height="64" rx="13" fill="#151B38"/><g transform="translate(11 10) scale(0.325)"><path d="M 57 13 C 64 9 70 9 77 13 L 112 34 C 121 40 122 49 114 55 L 103 62 C 98 65 95 65 90 62 L 74 52 C 68 48 65 49 60 52 L 48 60 C 44 62 43 65 43 69 C 43 73 44 76 48 78 L 61 86 C 66 90 70 91 75 87 L 90 77 C 95 74 99 74 104 77 L 114 84 C 122 89 121 99 113 105 L 77 126 C 69 131 64 131 56 126 L 17 104 C 10 100 8 95 8 87 L 8 49 C 8 43 11 39 17 35 Z" fill="url(#cwBlue)"/>
+ <g clip-path="url(#cwClip)">
+ <path d="M 0 41 L 65 2 L 127 35 L 97 60 L 70 46 L 35 78 L 0 71 Z" fill="#55B1FF" opacity=".22"/>
+ <path d="M -3 68 L 48 82 L 88 119 L 120 99 L 141 115 L 67 148 L 0 108 Z" fill="#7740E3" opacity=".26"/>
+ </g></g>
+</svg>

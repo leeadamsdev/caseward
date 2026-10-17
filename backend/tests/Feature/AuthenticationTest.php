@@ -25,6 +25,14 @@ class AuthenticationTest extends TestCase
     use InteractsWithBrowserSession;
     use RefreshDatabase;
 
+    public function test_guest_api_requests_return_json_without_requiring_an_accept_header(): void
+    {
+        foreach (['*/*', 'text/html', ''] as $accept) {
+            $this->get('/api/session', ['Accept' => $accept])
+                ->assertUnauthorized()->assertExactJson(['message' => 'Unauthenticated.']);
+        }
+    }
+
     public function test_login_rotates_the_session_and_persists_only_the_expected_user_data(): void
     {
         $user = $this->createUser();

@@ -16,6 +16,9 @@ class UpdateEmailRequest extends FormRequest
     /** @return array<string, list<string|Unique>> */
     public function rules(): array
     {
-        return ['email' => [...$this->emailRules(), Rule::unique('users', 'email')->ignore($this->user())]];
+        return [
+            'account_id' => ['required', 'integer', 'min:1'],
+            'email' => [...$this->emailRules(), Rule::unique('users', 'email')->ignore($this->user())],
+        ];
     }
 }

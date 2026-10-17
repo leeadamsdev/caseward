@@ -4,7 +4,7 @@ import {
     rateLimit,
     requiredFields,
     responseBody,
-    sessionPost,
+    sessionRequest,
     validationErrors,
     type FormFailure,
 } from "~/lib/api";
@@ -36,7 +36,7 @@ export async function signIn(
         loginFields,
     );
     if (Object.keys(errors).length > 0) return { status: "validation", errors };
-    const response = await sessionPost(request, "/api/login", values);
+    const response = await sessionRequest(request, "/api/login", { values });
     if (!(response instanceof Response)) return response;
     if (response.status === 204)
         return redirect(

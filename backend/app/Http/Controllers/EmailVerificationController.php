@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\SendVerificationEmail;
+use App\Actions\WithVerificationEmailLimit;
 use App\Http\Requests\UpdateEmailRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
@@ -55,7 +56,7 @@ class EmailVerificationController
         return response()->noContent();
     }
 
-    public function resend(Request $request, SendVerificationEmail $verificationEmail): Response
+    public function resend(Request $request, SendVerificationEmail $verificationEmail, WithVerificationEmailLimit $limit): Response
     {
         $user = $this->user($request);
 
@@ -63,42 +64,52 @@ class EmailVerificationController
             return response()->noContent();
         }
 
-        if (! $verificationEmail->send($user)) {
-            abort(response()->json([
-                'message' => 'We could not send your verification email. Please try again later.',
-                'code' => 'verification_email_unavailable',
-            ], 503)->header('Retry-After', (string) Config::integer('verification.resend_interval_seconds')));
-        }
+        return $limit->run($user->id, function () use ($user, $verificationEmail): Response {
+            if (! $verificationEmail->send($user)) {
+                abort(response()->json([
+                    'message' => 'We could not send your verification email. Please try again later.',
+                    'code' => 'verification_email_unavailable',
+                ], 503)->header('Retry-After', (string) Config::integer('verification.resend_interval_seconds')));
+            }
 
-        return response()->noContent()->header('Retry-After', (string) Config::integer('verification.resend_interval_seconds'));
+            return response()->noContent()->header('Retry-After', (string) Config::integer('verification.resend_interval_seconds'));
+        });
     }
 
-    public function update(UpdateEmailRequest $request, SendVerificationEmail $verificationEmail): UserResource
+    public function update(UpdateEmailRequest $request, SendVerificationEmail $verificationEmail, WithVerificationEmailLimit $limit): UserResource
     {
         $account = $this->user($request);
-
-        try {
-            $user = DB::transaction(function () use ($request, $account): User {
-                $user = User::query()->lockForUpdate()->findOrFail($account->id);
-                if ($user->hasVerifiedEmail()) {
-                    abort(response()->json([
-                        'message' => 'A verified email address cannot be corrected here.',
-                        'code' => 'email_already_verified',
-                    ], 403));
-                }
-                $user->update(['email' => $request->string('email')->toString()]);
-
-                return $user;
-            });
-        } catch (UniqueConstraintViolationException) {
-            throw ValidationException::withMessages([
-                'email' => __('validation.unique', ['attribute' => 'email']),
-            ]);
+        if ($request->integer('account_id') !== $account->id) {
+            abort(response()->json([
+                'message' => 'The signed-in account changed. Reopen the form before trying again.',
+                'code' => 'account_context_changed',
+            ], 409));
         }
 
-        return (new UserResource($user))->additional([
-            'meta' => ['verification_email_sent' => $verificationEmail->send($user)],
-        ]);
+        return $limit->run($account->id, function () use ($request, $account, $verificationEmail): UserResource {
+            try {
+                $user = DB::transaction(function () use ($request, $account): User {
+                    $user = User::query()->lockForUpdate()->findOrFail($account->id);
+                    if ($user->hasVerifiedEmail()) {
+                        abort(response()->json([
+                            'message' => 'A verified email address cannot be corrected here.',
+                            'code' => 'email_already_verified',
+                        ], 403));
+                    }
+                    $user->update(['email' => $request->string('email')->toString()]);
+
+                    return $user;
+                });
+            } catch (UniqueConstraintViolationException) {
+                throw ValidationException::withMessages([
+                    'email' => __('validation.unique', ['attribute' => 'email']),
+                ]);
+            }
+
+            return (new UserResource($user))->additional([
+                'meta' => ['verification_email_sent' => $verificationEmail->send($user)],
+            ]);
+        });
     }
 
     private function user(Request $request): User

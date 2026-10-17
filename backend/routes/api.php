@@ -23,7 +23,7 @@ Route::middleware('auth:web')->group(function (): void {
     Route::post('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
         ->middleware(['throttle:6,1,verify-email', 'signed:relative'])->name('verification.verify');
     Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
-        ->middleware('throttle:verification-email');
+        ->middleware('throttle:10,1,verification-email-requests');
     Route::patch('/email', [EmailVerificationController::class, 'update'])
-        ->middleware('throttle:verification-email');
+        ->middleware('throttle:10,1,verification-email-requests');
 });

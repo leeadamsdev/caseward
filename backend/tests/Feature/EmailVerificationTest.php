@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RedisStore;
+use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\ChannelManager;
 use Illuminate\Support\Facades\Cache;
@@ -229,7 +230,7 @@ class EmailVerificationTest extends TestCase
         $this->browserRequest('GET', '/api/session')->assertUnauthorized();
         $this->browserRequest('POST', $this->signedLink($user))->assertUnauthorized();
         $this->browserRequest('POST', '/api/email/verification-notification')->assertUnauthorized();
-        $this->browserRequest('PATCH', '/api/email', ['email' => 'corrected@example.com'])->assertUnauthorized();
+        $this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, 'email' => 'corrected@example.com'])->assertUnauthorized();
         $this->assertFalse($user->refresh()->hasVerifiedEmail());
         Notification::assertNothingSent();
     }
@@ -240,7 +241,7 @@ class EmailVerificationTest extends TestCase
         $this->browserRequest('POST', '/api/email/verification-notification')->assertNoContent();
         Notification::assertSentToTimes($user, VerifyEmail::class, 1);
         Redis::purge();
-        $this->browserRequest('PATCH', '/api/email', ['email' => 'corrected@example.com'])
+        $this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, 'email' => 'corrected@example.com'])
             ->assertTooManyRequests()->assertHeader('Retry-After');
         $this->browserRequest('POST', '/api/logout')->assertNoContent();
         $this->login($user);
@@ -254,6 +255,95 @@ class EmailVerificationTest extends TestCase
         $this->assertSame('alex@example.com', $user->refresh()->email);
     }
 
+    public function test_a_stale_correction_form_cannot_change_the_newly_signed_in_account(): void
+    {
+        $original = $this->login();
+        $other = $this->createUser('other@example.com');
+        $this->browserRequest('POST', '/api/logout')->assertNoContent();
+        $this->login($other);
+
+        $this->browserRequest('PATCH', '/api/email', ['account_id' => $original->id, 'email' => 'wrong-account@example.com'])
+            ->assertConflict()->assertJsonPath('code', 'account_context_changed');
+        $this->assertSame('alex@example.com', $original->refresh()->email);
+        $this->assertSame('other@example.com', $other->refresh()->email);
+        Notification::assertNothingSent();
+
+        $this->browserRequest('PATCH', '/api/email', ['account_id' => $other->id, 'email' => 'corrected@example.com'])->assertOk();
+    }
+
+    /** @param array<string, mixed> $data */
+    #[DataProvider('invalidAccountContexts')]
+    public function test_correction_requires_a_valid_account_context(array $data): void
+    {
+        $user = $this->login();
+        $this->browserRequest('PATCH', '/api/email', [...$data, 'email' => 'corrected@example.com'])
+            ->assertUnprocessable()->assertJsonValidationErrors('account_id');
+        $this->assertSame('alex@example.com', $user->refresh()->email);
+        Notification::assertNothingSent();
+    }
+
+    /** @return iterable<string, array{array<string, mixed>}> */
+    public static function invalidAccountContexts(): iterable
+    {
+        yield 'missing' => [[]];
+        yield 'zero' => [['account_id' => 0]];
+        yield 'negative' => [['account_id' => -1]];
+        yield 'array' => [['account_id' => [1]]];
+        yield 'fraction' => [['account_id' => 1.5]];
+    }
+
+    public function test_invalid_corrections_do_not_consume_the_email_quota(): void
+    {
+        $user = $this->login();
+        $this->createUser('taken@example.com');
+        foreach (['invalid', 'taken@example.com'] as $email) {
+            $this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, 'email' => $email])
+                ->assertUnprocessable()->assertJsonValidationErrors('email');
+        }
+        $this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, 'email' => 'corrected@example.com'])->assertOk();
+        $this->browserRequest('POST', '/api/email/verification-notification')->assertTooManyRequests();
+        Notification::assertSentToTimes($user, VerifyEmail::class, 1);
+    }
+
+    public function test_invalid_corrections_still_have_a_shared_account_request_limit(): void
+    {
+        $user = $this->login();
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            $this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, 'email' => 'invalid'])->assertUnprocessable();
+        }
+        $this->cookies = [];
+        $this->browserRequest('GET', '/sanctum/csrf-cookie')->assertNoContent();
+        $this->login($user);
+        $this->browserRequest('POST', '/api/email/verification-notification')->assertTooManyRequests()->assertHeader('Retry-After');
+        Notification::assertNothingSent();
+    }
+
+    public function test_the_account_email_lock_covers_delivery_and_is_released_afterwards(): void
+    {
+        $user = $this->login();
+        $blocked = false;
+        Notification::shouldReceive('send')->once()->andReturnUsing(function () use ($user, &$blocked): void {
+            Redis::purge();
+            $store = Cache::store('redis')->getStore();
+            $this->assertInstanceOf(LockProvider::class, $store);
+            $lock = $store->lock("verification-email:{$user->id}", 60);
+            $blocked = ! $lock->get();
+            if (! $blocked) {
+                $lock->release();
+            }
+        });
+        $this->browserRequest('POST', '/api/email/verification-notification')->assertNoContent();
+        $this->assertTrue($blocked);
+        $store = Cache::store('redis')->getStore();
+        $this->assertInstanceOf(LockProvider::class, $store);
+        $lock = $store->lock("verification-email:{$user->id}", 60);
+        try {
+            $this->assertTrue($lock->get());
+        } finally {
+            $lock->release();
+        }
+    }
+
     public function test_the_hourly_email_limit_still_applies_after_each_short_cooldown_expires(): void
     {
         Config::set('verification.resend_interval_seconds', 1);
@@ -263,7 +353,7 @@ class EmailVerificationTest extends TestCase
             if ($attempt % 2 === 0) {
                 $this->browserRequest('POST', '/api/email/verification-notification')->assertNoContent();
             } else {
-                $this->browserRequest('PATCH', '/api/email', ['email' => "corrected-{$attempt}@example.com"])
+                $this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, 'email' => "corrected-{$attempt}@example.com"])
                     ->assertOk();
             }
 
@@ -273,7 +363,7 @@ class EmailVerificationTest extends TestCase
         Redis::purge();
         $limited = $this->browserRequest('POST', '/api/email/verification-notification')->assertTooManyRequests();
         $this->assertGreaterThan(3500, (int) $limited->headers->get('Retry-After'));
-        $this->browserRequest('PATCH', '/api/email', ['email' => 'blocked@example.com'])->assertTooManyRequests();
+        $this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, 'email' => 'blocked@example.com'])->assertTooManyRequests();
         Notification::assertSentToTimes($user, VerifyEmail::class, 5);
         $this->assertSame('corrected-3@example.com', $user->refresh()->email);
     }
@@ -328,7 +418,7 @@ class EmailVerificationTest extends TestCase
         $user = $this->createUser();
         $user->markEmailAsVerified();
         $this->login($user);
-        $this->browserRequest('PATCH', '/api/email', ['email' => 'corrected@example.com'])->assertForbidden();
+        $this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, 'email' => 'corrected@example.com'])->assertForbidden();
         $this->assertSame('alex@example.com', $user->refresh()->email);
         $this->assertTrue($user->hasVerifiedEmail());
         Notification::assertNothingSent();
@@ -349,6 +439,7 @@ class EmailVerificationTest extends TestCase
         $oldLink = $this->signedLink($user);
         $password = $user->password;
         $this->browserRequest('PATCH', '/api/email', [
+            'account_id' => $user->id,
             'email' => '  Corrected@EXAMPLE.COM  ',
             'id' => 999,
             'name' => 'Another Person',
@@ -376,7 +467,7 @@ class EmailVerificationTest extends TestCase
     {
         $user = $this->login();
         $this->createUser('taken@example.com');
-        $this->browserRequest('PATCH', '/api/email', $data)->assertUnprocessable()->assertJsonValidationErrors('email');
+        $this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, ...$data])->assertUnprocessable()->assertJsonValidationErrors('email');
         $this->assertSame('alex@example.com', $user->refresh()->email);
         Notification::assertNothingSent();
     }
@@ -397,14 +488,20 @@ class EmailVerificationTest extends TestCase
     public function test_a_duplicate_address_claimed_after_validation_returns_a_validation_error(): void
     {
         $user = $this->login();
-        $this->app->afterResolving(UpdateEmailRequest::class, function (): void {
-            $this->createUser('corrected@example.com');
+        $claimed = false;
+        $this->app->afterResolving(UpdateEmailRequest::class, function () use (&$claimed): void {
+            if (! $claimed) {
+                $claimed = true;
+                $this->createUser('corrected@example.com');
+            }
         });
 
-        $this->browserRequest('PATCH', '/api/email', ['email' => 'corrected@example.com'])
+        $this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, 'email' => 'corrected@example.com'])
             ->assertUnprocessable()->assertJsonValidationErrors('email');
         $this->assertSame('alex@example.com', $user->refresh()->email);
         Notification::assertNothingSent();
+        $this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, 'email' => 'available@example.com'])->assertOk();
+        Notification::assertSentToTimes($user, VerifyEmail::class, 1);
     }
 
     public function test_address_correction_rechecks_verification_after_validation(): void
@@ -414,7 +511,7 @@ class EmailVerificationTest extends TestCase
             $user->markEmailAsVerified();
         });
 
-        $this->browserRequest('PATCH', '/api/email', ['email' => 'corrected@example.com'])->assertForbidden();
+        $this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, 'email' => 'corrected@example.com'])->assertForbidden();
         $this->assertTrue($user->refresh()->hasVerifiedEmail());
         $this->assertSame('alex@example.com', $user->email);
         Notification::assertNothingSent();
@@ -461,6 +558,7 @@ class EmailVerificationTest extends TestCase
             ]);
         $this->assertFalse($user->refresh()->hasVerifiedEmail());
         Exceptions::assertReported(TransportException::class);
+        $this->browserRequest('POST', '/api/email/verification-notification')->assertTooManyRequests();
     }
 
     public function test_delivery_failure_after_email_correction_keeps_the_new_address_explicit_and_unverified(): void
@@ -469,13 +567,14 @@ class EmailVerificationTest extends TestCase
         $oldLink = $this->signedLink($user);
         Exceptions::fake();
         Notification::shouldReceive('send')->once()->andThrow(new TransportException('Private provider diagnostic.'));
-        $this->browserRequest('PATCH', '/api/email', ['email' => 'corrected@example.com'])
+        $this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, 'email' => 'corrected@example.com'])
             ->assertOk()->assertJsonPath('data.email', 'corrected@example.com')
             ->assertJsonPath('meta.verification_email_sent', false)->assertDontSee('Private provider diagnostic.');
         $this->assertSame('corrected@example.com', $user->refresh()->email);
         $this->assertFalse($user->hasVerifiedEmail());
         $this->browserRequest('POST', $oldLink)->assertForbidden();
         Exceptions::assertReported(TransportException::class);
+        $this->browserRequest('POST', '/api/email/verification-notification')->assertTooManyRequests();
     }
 
     #[DataProvider('mailpitDeliveries')]

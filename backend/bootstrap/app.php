@@ -19,6 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
         $middleware->throttleWithRedis();
+        // API authentication failures must not resolve a backend sign-in route.
+        $middleware->redirectGuestsTo(static fn (): null => null);
         $middleware->alias(['verified' => EnsureEmailIsVerified::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -5,6 +5,7 @@ import {
     useSearchParams,
     useNavigation,
     useFetcher,
+    useNavigate,
 } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Notice } from "~/components/ui/notice";
@@ -15,6 +16,7 @@ import { ResendVerificationForm } from "./resend-verification-form";
 import type { ResendResult } from "./verification";
 
 export function VerificationWaiting({ user }: { user: User }) {
+    const navigate = useNavigate();
     const revalidator = useRevalidator();
     const navigation = useNavigation();
     const resend = useFetcher<ResendResult>();
@@ -24,6 +26,7 @@ export function VerificationWaiting({ user }: { user: User }) {
     const headingRef = useRef<HTMLHeadingElement>(null);
     const noticeRef = useRef<HTMLDivElement>(null);
     const pending = revalidator.state !== "idle";
+    const updated = params.get("updated") === "1";
     const deliveryFailed =
         params.get("delivery") === "failed" && resend.data?.status !== "sent";
 
@@ -34,9 +37,14 @@ export function VerificationWaiting({ user }: { user: User }) {
         if (checked && !pending) noticeRef.current?.focus();
     }, [checked, pending]);
     useEffect(() => {
-        if (resend.data?.status !== "sent" || !params.has("delivery")) return;
+        if (
+            resend.data?.status !== "sent" ||
+            (!params.has("delivery") && !params.has("account"))
+        )
+            return;
         const next = new URLSearchParams(params);
         next.delete("delivery");
+        next.delete("account");
         setParams(next, { replace: true, preventScrollReset: true });
     }, [resend.data, params, setParams]);
 
@@ -63,20 +71,41 @@ export function VerificationWaiting({ user }: { user: User }) {
                     {user.email}
                 </strong>
             </p>
+            {!resend.data && params.get("account") === "changed" && (
+                <Notice
+                    tone="warning"
+                    className="mt-6"
+                    title="Your signed-in account changed"
+                >
+                    <p>
+                        The previous form didn’t change an email address. Check
+                        the account above before continuing.
+                    </p>
+                </Notice>
+            )}
             {!resend.data &&
+                params.get("account") !== "changed" &&
                 (deliveryFailed ? (
                     <Notice
                         tone="warning"
-                        title="Your account is saved"
+                        title={
+                            updated
+                                ? "Email address saved"
+                                : "Your account is saved"
+                        }
                         className="mt-6"
                     >
                         <p>
-                            We couldn’t send your verification email. Please try
-                            resending it below.
+                            {updated
+                                ? "Your email address was updated, but we couldn’t send the verification email. Please try resending it below."
+                                : "We couldn’t send your verification email. Please try resending it below."}
                         </p>
                     </Notice>
                 ) : (
-                    <Notice className="mt-6">
+                    <Notice
+                        className="mt-6"
+                        title={updated ? "Email address saved" : ""}
+                    >
                         <p className="leading-6">
                             Follow the link to verify your address before
                             continuing. The link expires in 1 hour. If you don’t
@@ -121,6 +150,16 @@ export function VerificationWaiting({ user }: { user: User }) {
                     {pending ? "Checking your email verification status." : ""}
                 </p>
             </ResendVerificationForm>
+            <Button
+                variant="ghost"
+                className="mt-4 min-h-12 w-full px-4 py-3"
+                disabled={pending || resending || navigation.state !== "idle"}
+                onClick={() => {
+                    void navigate("/verify-email/change");
+                }}
+            >
+                Change email address
+            </Button>
             <SignOutForm disabled={pending || resending} />
         </>
     );

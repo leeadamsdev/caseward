@@ -4,7 +4,7 @@ import {
     rateLimit,
     requiredFields,
     responseBody,
-    sessionPost,
+    sessionRequest,
     validationErrors,
     type FormFailure,
 } from "~/lib/api";
@@ -59,7 +59,7 @@ export async function registerAccount(
         errors.password_confirmation = ["Passwords do not match."];
     if (Object.keys(errors).length > 0) return { status: "validation", errors };
 
-    const response = await sessionPost(request, "/api/register", values);
+    const response = await sessionRequest(request, "/api/register", { values });
     if (!(response instanceof Response)) return response;
     if (response.status === 429) return rateLimit(response);
     if (response.status === 419) return { status: "error", reason: "expired" };

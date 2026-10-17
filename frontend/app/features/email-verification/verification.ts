@@ -4,7 +4,7 @@ import {
     isRecord,
     rateLimit,
     responseBody,
-    sessionPost,
+    sessionRequest,
     retryWindow,
     type ApiFailure,
     type RateLimit,
@@ -35,7 +35,7 @@ export async function waitingAction({
     if (data.get("intent") === "logout") return signOut({ request });
     if (data.get("intent") !== "resend")
         return { status: "error", reason: "server" };
-    const response = await sessionPost(
+    const response = await sessionRequest(
         request,
         "/api/email/verification-notification",
     );
@@ -94,7 +94,7 @@ export async function verifyEmail({
     if (intent !== "verify") return { status: "error", reason: "server" };
 
     // Preserve the signed query verbatim; opening a link never mutates the account.
-    const response = await sessionPost(request, `/api${path}`);
+    const response = await sessionRequest(request, `/api${path}`);
     if (!(response instanceof Response)) return response;
     if (response.status === 204) return { status: "verified" };
     if (response.status === 401) return redirect(verificationSignIn(path));

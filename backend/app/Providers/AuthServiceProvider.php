@@ -44,17 +44,6 @@ class AuthServiceProvider extends ServiceProvider
 
                 return $limits;
             });
-
-            $limiter->for('verification-email', function (Request $request): array {
-                $user = $request->user();
-                abort_unless($user instanceof User, 401);
-                $id = $user->id;
-
-                return [
-                    Limit::perSecond(1, Config::integer('verification.resend_interval_seconds'))->by("minute:{$id}"),
-                    Limit::perHour(5)->by("hour:{$id}"),
-                ];
-            });
         });
     }
 }

@@ -10,6 +10,7 @@ export function FormField({
     type,
     autoComplete,
     placeholder,
+    defaultValue,
     errors,
     labelAction,
     visibilityLabel = "password",
@@ -19,6 +20,7 @@ export function FormField({
     type: "text" | "email" | "password";
     autoComplete: string;
     placeholder: string;
+    defaultValue?: string;
     errors: string[] | undefined;
     labelAction?: ReactNode;
     visibilityLabel?: string | undefined;
@@ -42,6 +44,7 @@ export function FormField({
                     type={password && visible ? "text" : type}
                     autoComplete={autoComplete}
                     placeholder={placeholder}
+                    defaultValue={defaultValue}
                     required
                     autoCapitalize="none"
                     spellCheck={false}

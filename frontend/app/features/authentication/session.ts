@@ -7,7 +7,7 @@ import {
     apiRequest,
     isRecord,
     responseBody,
-    sessionPost,
+    sessionRequest,
     type ApiFailure,
 } from "~/lib/api";
 
@@ -76,7 +76,7 @@ export async function accountLoader({ request }: { request: Request }) {
 export async function signOut({ request }: { request: Request }) {
     const value = (await request.formData()).get("returnTo");
     const returnTo = verificationPath(typeof value === "string" ? value : null);
-    const response = await sessionPost(request, "/api/logout");
+    const response = await sessionRequest(request, "/api/logout");
     if (!(response instanceof Response)) return response;
     if (response.status === 204 || response.status === 401)
         return redirect(verificationSignIn(returnTo));

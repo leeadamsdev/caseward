@@ -39,10 +39,13 @@ export async function apiRequest(
     }
 }
 
-export async function sessionPost(
+export async function sessionRequest(
     request: Request,
     path: string,
-    values?: Record<string, string>,
+    {
+        method = "POST",
+        values,
+    }: { method?: "POST" | "PATCH"; values?: Record<string, string> } = {},
 ): Promise<Response | ApiFailure> {
     const bootstrap = await apiRequest(request, "/sanctum/csrf-cookie");
     if (!(bootstrap instanceof Response)) return bootstrap;
@@ -60,7 +63,7 @@ export async function sessionPost(
     if (!token) return { status: "error", reason: "server" };
 
     return apiRequest(request, path, {
-        method: "POST",
+        method,
         headers: { "Content-Type": "application/json", "X-XSRF-TOKEN": token },
         body: JSON.stringify(values ?? {}),
     });

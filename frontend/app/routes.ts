@@ -13,6 +13,7 @@ export default [
     ]),
     route("account", "routes/account.tsx"),
     route("verify-email", "routes/verify-email.tsx"),
+    route("verify-email/change", "routes/change-email.tsx"),
     route("email/verify/:id/:hash", "routes/verify-email-link.tsx"),
     route("*", "routes/not-found.tsx"),
 ] satisfies RouteConfig;

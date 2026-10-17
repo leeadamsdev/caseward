@@ -2,8 +2,21 @@ name: Backend
 
 on:
   push:
+    paths:
+      - "backend/**"
+      - "docker/backend/**"
+      - "docker/postgres/**"
+      - "docker/valkey/**"
+      - ".github/workflows/backend.yaml"
+      - "compose.yaml"
+      - ".editorconfig"
+      - ".gitattributes"
   pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

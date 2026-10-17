@@ -2,8 +2,19 @@ name: Frontend
 
 on:
   push:
+    paths:
+      - "frontend/**"
+      - "docker/frontend/**"
+      - ".github/workflows/frontend.yaml"
+      - "compose.yaml"
+      - ".editorconfig"
+      - ".gitattributes"
   pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -27,7 +38,10 @@ jobs:
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Generate build configuration
-        run: docker compose build --print frontend > "$RUNNER_TEMP/frontend-bake.json"
+        id: build
+        run: |
+          docker compose build --print frontend > "$RUNNER_TEMP/frontend-bake.json"
+          echo "playwright-version=$(jq -r '.devDependencies["@playwright/test"]' frontend/package.json)" >> "$GITHUB_OUTPUT"
 
       - name: Build frontend with cached layers
         uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7.5.0
@@ -37,17 +51,13 @@ jobs:
           targets: frontend
           load: true
           set: |
+            frontend.target=browser-tests
+            frontend.args.PLAYWRIGHT_VERSION=${{ steps.build.outputs.playwright-version }}
             frontend.cache-from=type=gha,scope=caseward-frontend
             frontend.cache-to=type=gha,scope=caseward-frontend,mode=max
 
       - name: Start frontend
         run: docker compose up --no-build --wait --wait-timeout 300 frontend
-
-      - name: Install browser system dependencies
-        run: docker compose exec -T --user root frontend pnpm exec playwright install-deps chromium
-
-      - name: Install Chromium
-        run: docker compose exec -T frontend pnpm exec playwright install chromium
 
       - name: Check frontend
         run: docker compose exec -T -e CI=true frontend pnpm run check

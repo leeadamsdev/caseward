@@ -1,4 +1,4 @@
-FROM node:24.22.0-trixie-slim
+FROM node:24.22.0-trixie-slim AS base
 
 RUN npm install --global pnpm@12.14.0 --allow-scripts=pnpm --no-fund
 
@@ -16,3 +16,17 @@ USER node
 
 ENTRYPOINT ["caseward-entrypoint"]
 CMD ["pnpm", "run", "dev", "--host", "0.0.0.0", "--port", "5173"]
+
+FROM base AS browser-tests
+
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+USER root
+ARG PLAYWRIGHT_VERSION
+RUN test -n "$PLAYWRIGHT_VERSION" \
+    && pnpm dlx "playwright@$PLAYWRIGHT_VERSION" install --with-deps --only-shell chromium \
+    && rm -rf /var/lib/apt/lists/*
+USER node
+
+# Keep browser tooling out of the default development image.
+FROM base AS development

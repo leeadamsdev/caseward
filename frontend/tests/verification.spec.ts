@@ -116,6 +116,7 @@ test("routes unverified sign-ins and protected pages to verification", async ({
     });
     await page.goto("/login");
     await signIn(page);
+    await expect(page).toHaveURL("/verify-email");
     for (const path of ["/account", "/register", "/login"]) {
         await page.goto(path);
         await expect(page).toHaveURL("/verify-email");

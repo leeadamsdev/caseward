@@ -200,6 +200,21 @@ test("registers, verifies, signs in and recovers the password through Mailpit", 
             page.getByRole("heading", { name: "Password reset", exact: true }),
         ).toBeVisible();
         expect(await protectedStatus()).toBe(401);
+        const confirmation = await capturedMail(
+            request,
+            `to:${email} subject:"Your password was reset"`,
+        );
+        expect(confirmation.subject).toBe("Your password was reset | Caseward");
+        expect(confirmation.html).toContain('alt="Caseward"');
+        for (const content of [confirmation.html, confirmation.text]) {
+            expect(content).toContain(email);
+            expect(content).toContain(`${baseURL}/forgot-password`);
+            expect(content).toContain("no further action is needed");
+            expect(content).toContain("Existing sessions have been signed out");
+            expect(content).not.toContain(resetTarget.pathname);
+            expect(content).not.toContain(password);
+            expect(content).not.toContain(newPassword);
+        }
         await previousPage.goto("/account");
         await expect(previousPage).toHaveURL("/login?reason=session");
 

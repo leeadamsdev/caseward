@@ -39,6 +39,11 @@
                                 <tr>
                                     <td style="padding-bottom:28px;font-size:15px;line-height:24px;word-break:break-all;overflow-wrap:anywhere;"><strong>{{ $email }}</strong></td>
                                 </tr>
+                                @hasSection('before-action')
+                                    <tr>
+                                        <td style="padding-bottom:24px;font-size:15px;line-height:24px;">@yield('before-action')</td>
+                                    </tr>
+                                @endif
                                 <tr>
                                     <td align="center" style="padding-bottom:24px;">
                                         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">

@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Redis;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\Mailer\SentMessage;
@@ -171,27 +172,92 @@ class RecoveryQueueTest extends TestCase
         $this->assertFalse(Password::tokenExists($user, $token));
     }
 
-    public function test_brevo_receives_the_branded_reset_email_without_contact_tracking_consent(): void
+    public function test_confirmation_is_encrypted_and_preserves_the_recipient_and_reset_time_during_delays(): void
+    {
+        $this->travelTo(now()->setDate(2026, 10, 18)->setTime(15, 45)->utc());
+        $user = $this->user();
+        $email = $user->email;
+        $token = Password::createToken($user);
+        $password = 'a new sufficiently long password';
+        $recovery = $this->app->make(RecoverPassword::class);
+        $this->assertTrue($recovery->reset($email, $token, $password));
+        $this->assertFalse($recovery->reset($email, $token, $password));
+        $hash = $user->refresh()->password;
+        $this->assertSame(1, $this->queue()->size());
+        $this->assertCount(0, $this->transport()->messages());
+        $user->update(['email' => 'corrected@example.com']);
+        $this->travel(2)->hours();
+
+        $job = $this->queue()->pop();
+        $this->assertNotNull($job);
+        foreach ([$email, $token, $password, $hash] as $secret) {
+            $this->assertStringNotContainsString($secret, $job->getRawBody());
+        }
+        $job->fire();
+        $message = $this->email();
+        $this->assertSame($email, $message->getTo()[0]->getAddress());
+        $this->assertSame('Your password was reset | Caseward', $message->getSubject());
+        foreach ([$message->getHtmlBody(), $message->getTextBody()] as $body) {
+            $this->assertIsString($body);
+            $this->assertStringContainsString('18 October 2026 at 15:45 UTC', $body);
+            $this->assertStringContainsString('http://localhost:5173/forgot-password', $body);
+            foreach ([$user->email, $token, $password, $hash] as $secret) {
+                $this->assertStringNotContainsString($secret, $body);
+            }
+        }
+        $this->assertEmpty($message->getAttachments());
+        $this->assertSame(0, $this->queue()->size());
+    }
+
+    public function test_confirmation_delivery_retries_without_changing_the_completed_reset(): void
+    {
+        Exceptions::fake();
+        $user = $this->user();
+        $token = Password::createToken($user);
+        $this->assertTrue($this->app->make(RecoverPassword::class)->reset($user->email, $token, 'a new sufficiently long password'));
+        $hash = $user->refresh()->password;
+        Config::set('mail.default', 'smtp');
+        Config::set('mail.mailers.smtp.host', '127.0.0.1');
+        Config::set('mail.mailers.smtp.port', 1);
+        $options = new WorkerOptions(backoff: 0, sleep: 0, maxTries: 3);
+        $worker = $this->app->make('queue.worker');
+        $this->assertInstanceOf(Worker::class, $worker);
+
+        $worker->runNextJob('redis', 'default', $options);
+        $this->assertSame(1, $this->queue()->delayedSize());
+        Exceptions::assertReportedCount(1);
+        Config::set('mail.default', 'array');
+        $worker->runNextJob('redis', 'default', $options);
+
+        $this->assertSame(0, $this->queue()->size());
+        $this->assertSame($hash, $user->refresh()->password);
+        $this->assertFalse(Password::tokenExists($user, $token));
+        $this->assertSame('Your password was reset | Caseward', $this->email()->getSubject());
+    }
+
+    #[DataProvider('recoveryEmails')]
+    public function test_brevo_receives_branded_recovery_emails_without_contact_tracking_consent(bool $confirmation): void
     {
         $user = $this->user();
         $requests = 0;
-        $client = new MockHttpClient(function (string $method, string $url, array $options) use ($user, &$requests): MockResponse {
+        $client = new MockHttpClient(function (string $method, string $url, array $options) use ($user, $confirmation, &$requests): MockResponse {
             $requests++;
             $this->assertSame('POST', $method);
             $this->assertSame('https://api.brevo.com/v3/smtp/email', $url);
             $this->assertIsString($options['body']);
             $body = json_decode($options['body'], true, flags: JSON_THROW_ON_ERROR);
             $this->assertIsArray($body);
-            $this->assertSame('Reset your password | Caseward', $body['subject']);
+            $this->assertSame($confirmation ? 'Your password was reset | Caseward' : 'Reset your password | Caseward', $body['subject']);
             $this->assertSame([['email' => $user->email, 'contactPixelTrackingConsent' => false]], $body['to']);
             $html = $body['htmlContent'];
             $text = $body['textContent'];
             $this->assertIsString($html);
             $this->assertIsString($text);
             $this->assertStringContainsString('alt="Caseward"', $html);
-            $this->assertStringContainsString('expires in 30 minutes', $html);
-            $this->assertStringContainsString('expires in 30 minutes', $text);
-            $this->assertStringContainsString('http://localhost:5173/reset-password/', $text);
+            foreach ([$html, $text] as $content) {
+                $this->assertStringContainsString($confirmation ? 'no further action is needed' : 'expires in 30 minutes', $content);
+                $this->assertStringContainsString($confirmation ? 'http://localhost:5173/forgot-password' : 'http://localhost:5173/reset-password/', $content);
+            }
             $this->assertStringContainsString($user->email, $text);
             $this->assertArrayNotHasKey('attachment', $body);
 
@@ -200,9 +266,21 @@ class RecoveryQueueTest extends TestCase
         $this->app->instance(HttpClientInterface::class, $client);
         Config::set('mail.mailers.brevo.key', 'test-api-key');
         Config::set('mail.default', 'brevo');
-        $this->app->make(RecoverPassword::class)->sendLink($user->email);
+        $recovery = $this->app->make(RecoverPassword::class);
+        if ($confirmation) {
+            $this->assertTrue($recovery->reset($user->email, Password::createToken($user), 'a new sufficiently long password'));
+        } else {
+            $recovery->sendLink($user->email);
+        }
         $this->processDelivery();
         $this->assertSame(1, $requests);
+    }
+
+    /** @return iterable<string, array{bool}> */
+    public static function recoveryEmails(): iterable
+    {
+        yield 'reset link' => [false];
+        yield 'reset confirmation' => [true];
     }
 
     private function user(): User

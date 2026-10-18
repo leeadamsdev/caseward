@@ -10,7 +10,6 @@ if (process.env.CASEWARD_E2E !== "1") {
 export default defineConfig({
     ...config,
     testDir: "./tests/e2e",
-    testIgnore: [],
     fullyParallel: false,
     workers: 1,
     timeout: 60_000,

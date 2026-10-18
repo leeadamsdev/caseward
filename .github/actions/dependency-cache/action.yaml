@@ -8,6 +8,9 @@ inputs:
     default: "false"
     description: Restore pnpm's content-addressed store.
 outputs:
+  cache-directory:
+    description: The root directory shared by native and Docker dependency caches.
+    value: ${{ steps.directories.outputs.cache-directory }}
   node-version:
     description: The exact Node.js version used by the frontend Docker image.
     value: ${{ steps.toolchain.outputs.node }}
@@ -15,16 +18,19 @@ runs:
   using: composite
   steps:
     - name: Prepare cache directories
+      id: directories
       shell: bash
       working-directory: ${{ github.workspace }}
       run: |
-        echo "CI_CACHE_DIR=$RUNNER_TEMP/caseward-cache" >> "$GITHUB_ENV"
-        mkdir -p "$RUNNER_TEMP/caseward-cache/composer" "$RUNNER_TEMP/caseward-cache/pnpm" "$RUNNER_TEMP/caseward-cache/pnpm-metadata"
+        cache_directory="$RUNNER_TEMP/caseward-cache"
+        echo "CI_CACHE_DIR=$cache_directory" >> "$GITHUB_ENV"
+        echo "cache-directory=$cache_directory" >> "$GITHUB_OUTPUT"
+        mkdir -p "$cache_directory/composer" "$cache_directory/pnpm" "$cache_directory/pnpm-metadata"
     - name: Cache Composer downloads
       if: inputs.backend == 'true'
       uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
       with:
-        path: ${{ runner.temp }}/caseward-cache/composer
+        path: ${{ steps.directories.outputs.cache-directory }}/composer
         key: composer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('docker/backend/Dockerfile') }}-${{ hashFiles('backend/composer.lock') }}
         restore-keys: composer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('docker/backend/Dockerfile') }}-
     - name: Identify frontend toolchain
@@ -45,7 +51,7 @@ runs:
       uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
       with:
         path: |
-          ${{ runner.temp }}/caseward-cache/pnpm
-          ${{ runner.temp }}/caseward-cache/pnpm-metadata
+          ${{ steps.directories.outputs.cache-directory }}/pnpm
+          ${{ steps.directories.outputs.cache-directory }}/pnpm-metadata
         key: pnpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.frontend }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
         restore-keys: pnpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.frontend }}-

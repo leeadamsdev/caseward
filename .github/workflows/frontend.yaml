@@ -36,10 +36,10 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
         env:
-          pnpm_config_store_dir: ${{ env.CI_CACHE_DIR }}/pnpm
-          pnpm_config_cache_dir: ${{ env.CI_CACHE_DIR }}/pnpm-metadata
+          pnpm_config_store_dir: ${{ steps.dependencies.outputs.cache-directory }}/pnpm
+          pnpm_config_cache_dir: ${{ steps.dependencies.outputs.cache-directory }}/pnpm-metadata
 
-      - name: Check formatting, types, lint and unit tests
+      - name: Check formatting, types, lint and fast tests
         run: pnpm run check:static
 
       - name: Audit dependencies

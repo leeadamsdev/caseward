@@ -3,6 +3,7 @@
         "app/**/*.ts",
         "app/**/*.tsx",
         "tests/**/*.ts",
+        "tests/**/*.tsx",
         "*.ts",
         ".react-router/types/**/*"
     ],

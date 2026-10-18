@@ -24,7 +24,7 @@ export const registrationFields = [
     ...newPasswordFields,
 ] as const;
 
-export type RegistrationFieldName = (typeof registrationFields)[number]["name"];
+type RegistrationFieldName = (typeof registrationFields)[number]["name"];
 export type RegistrationResult = FormFailure<RegistrationFieldName>;
 
 export async function registerAccount(

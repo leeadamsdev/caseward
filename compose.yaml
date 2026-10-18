@@ -1,6 +1,16 @@
 name: caseward
 
 services:
+    tooling:
+        image: rhysd/actionlint:1.7.12
+        profiles: [tools]
+        working_dir: /repo
+        volumes:
+            - .:/repo:ro
+        entrypoint: [/bin/sh, -c]
+        command:
+            - actionlint && find docker .github -type f -name '*.sh' -exec shellcheck {} +
+
     frontend:
         build:
             context: ./docker/frontend

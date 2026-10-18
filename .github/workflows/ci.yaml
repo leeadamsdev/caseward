@@ -25,6 +25,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Check workflows and shell scripts
+        run: docker compose run --rm --no-deps tooling
       - name: Test change selection
         run: node --test .github/scripts/*.test.mjs
       - name: Select affected jobs

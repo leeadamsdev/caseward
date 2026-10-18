@@ -1,0 +1,7 @@
+{
+    "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+    // Analyse the E2E config statically so its isolated-environment guard stays intact.
+    "entry": ["playwright.e2e.config.ts", "tests/e2e/**/*.spec.ts"],
+    // Docker does not mount the parent .gitignore that excludes generated files.
+    "project": ["app/**/*.{ts,tsx,css}", "tests/**/*.{ts,tsx}", "*.{ts,mjs}"],
+}

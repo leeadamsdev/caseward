@@ -16,7 +16,7 @@ import {
 } from "~/lib/api";
 
 export type Workspace = { id: string; name: string; role: "owner" | "member" };
-export type WorkspacePage = {
+type WorkspacePage = {
     items: Workspace[];
     page: number;
     lastPage: number;
@@ -24,7 +24,7 @@ export type WorkspacePage = {
 };
 export type WorkspaceListResult =
     { status: "loaded"; page: WorkspacePage } | ApiFailure;
-export type WorkspaceResult =
+type WorkspaceResult =
     | { status: "loaded"; workspace: Workspace }
     | { status: "missing" }
     | ApiFailure;

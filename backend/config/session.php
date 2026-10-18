@@ -7,6 +7,8 @@ return [
     'store' => 'redis',
     'connection' => 'default',
     'prefix' => 'sessions:',
+    'expire_on_close' => true,
+    'remember_lifetime' => 60 * 24 * 30,
     // Serialize session writes so an overlapping request cannot undo logout.
     'block' => true,
     'block_store' => 'redis',

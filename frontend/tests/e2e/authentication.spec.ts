@@ -1,6 +1,26 @@
 import { randomUUID } from "node:crypto";
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { rm } from "node:fs/promises";
+import {
+    expect,
+    test,
+    type APIRequestContext,
+    type BrowserContext,
+    type Response,
+} from "@playwright/test";
 import { isRecord } from "../../app/lib/api";
+
+async function sessionCookieExpiry(response: Response) {
+    const cookie = (await response.headersArray()).find(
+        ({ name, value }) =>
+            name.toLowerCase() === "set-cookie" &&
+            value.startsWith("caseward_session="),
+    );
+    const expires = /;\s*expires=([^;]+)/i.exec(cookie?.value ?? "")?.[1];
+    const deadline = Date.parse(expires ?? "");
+    if (!Number.isFinite(deadline))
+        throw new Error("Response has no persistent session cookie expiry");
+    return deadline;
+}
 
 async function capturedMail(request: APIRequestContext, query: string) {
     let messageId: string | undefined;
@@ -121,6 +141,10 @@ test("registers, verifies, signs in and recovers the password through Mailpit", 
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page).toHaveURL("/account");
+    const ordinaryCookie = (await page.context().cookies()).find(
+        (cookie) => cookie.name === "caseward_session",
+    );
+    expect(ordinaryCookie?.expires).toBe(-1);
     await expect(page.getByText(email, { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect(page).toHaveURL("/login");
@@ -164,9 +188,13 @@ test("registers, verifies, signs in and recovers the password through Mailpit", 
     expect(resetMail.text).toContain("expires in 30 minutes");
     expect(await protectedStatus()).toBe(401);
 
-    const previousSession = await browser.newContext({ baseURL });
+    const profile = test.info().outputPath("remembered-browser");
+    const openRememberedBrowser = () =>
+        browser.browserType().launchPersistentContext(profile, { baseURL });
+    let previousSession: BrowserContext | undefined;
     try {
-        const previousPage = await previousSession.newPage();
+        previousSession = await openRememberedBrowser();
+        let previousPage = await previousSession.newPage();
         await previousPage.goto("/login");
         await previousPage
             .getByLabel("Email address", { exact: true })
@@ -175,9 +203,34 @@ test("registers, verifies, signs in and recovers the password through Mailpit", 
             .getByLabel("Password", { exact: true })
             .fill(password);
         await previousPage
+            .getByRole("checkbox", { name: "Remember me for 30 days" })
+            .check();
+        const signInResponse = previousPage.waitForResponse("**/api/login");
+        await previousPage
             .getByRole("button", { name: "Sign in", exact: true })
             .click();
+        const deadline = await sessionCookieExpiry(await signInResponse);
         await expect(previousPage).toHaveURL("/account");
+        const rememberedCookie = (await previousSession.cookies()).find(
+            (cookie) => cookie.name === "caseward_session",
+        );
+        expect(rememberedCookie).toBeDefined();
+        expect(rememberedCookie?.httpOnly).toBe(true);
+        expect(rememberedCookie?.sameSite).toBe("Lax");
+        expect(rememberedCookie?.expires).toBeGreaterThan(
+            Date.now() / 1000 + 29 * 24 * 60 * 60,
+        );
+        await previousSession.close();
+        previousSession = await openRememberedBrowser();
+        previousPage = await previousSession.newPage();
+        const restoredSession = previousPage.waitForResponse("**/api/session");
+        await previousPage.goto("/account");
+        await expect(previousPage).toHaveURL("/account");
+        await expect(
+            previousPage.getByText(email, { exact: true }),
+        ).toBeVisible();
+        // Expires is exact; Chromium derives fractional expiry from Max-Age at receipt time.
+        expect(await sessionCookieExpiry(await restoredSession)).toBe(deadline);
 
         const newPassword = "A new long recovery smoke passphrase 🔐";
         await page.goto(resetLink);
@@ -256,7 +309,11 @@ test("registers, verifies, signs in and recovers the password through Mailpit", 
         ).toBeVisible();
         expect(await previousPage.pageErrors()).toEqual([]);
     } finally {
-        await previousSession.close();
+        try {
+            await previousSession?.close();
+        } finally {
+            await rm(profile, { recursive: true, force: true });
+        }
     }
     expect(await page.pageErrors()).toEqual([]);
 });

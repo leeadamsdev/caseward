@@ -46,6 +46,11 @@ test("provides consistent navigation, keyboard controls and accessible sign-in",
         "current-password",
     );
     await expect(page.getByText("Password requirements")).toHaveCount(0);
+    const remember = page.getByRole("checkbox", {
+        name: "Remember me for 30 days",
+    });
+    await expect(remember).not.toBeChecked();
+    await expect(remember).toHaveCSS("cursor", "pointer");
     await fillLogin(page);
     await page
         .getByRole("button", { name: "Show password", exact: true })
@@ -55,12 +60,18 @@ test("provides consistent navigation, keyboard controls and accessible sign-in",
         "type",
         "text",
     );
+    await page.keyboard.press("Tab");
+    await expect(remember).toBeFocused();
+    await page.keyboard.press("Space");
+    await expect(remember).toBeChecked();
     await checkAccessibility(page);
     await page
         .getByRole("link", { name: "Create an account", exact: true })
         .click();
     await expect(page).toHaveURL("/register");
     await expect(page.getByLabel("Password", { exact: true })).toHaveValue("");
+    await page.getByRole("link", { name: "Sign in", exact: true }).click();
+    await expect(remember).not.toBeChecked();
 });
 
 test("validates required fields locally and preserves backend credential errors", async ({
@@ -82,6 +93,7 @@ test("validates required fields locally and preserves backend credential errors"
         expect(route.request().postDataJSON()).toEqual({
             email: user.email,
             password,
+            remember: false,
         });
         await route.fulfill({
             status: 422,
@@ -118,16 +130,27 @@ test("signs in once, restores the session on reload, guards guest pages and sign
     let requests = 0;
     await page.route("**/api/login", async (route) => {
         requests++;
+        expect(route.request().postDataJSON()).toEqual({
+            email: user.email,
+            password,
+            remember: true,
+        });
         await pending;
         await authenticatedSession(page);
         await route.fulfill({ status: 204 });
     });
     await page.goto("/login");
     await fillLogin(page);
+    const remember = page.getByRole("checkbox", {
+        name: "Remember me for 30 days",
+    });
+    await remember.check();
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(
         page.getByRole("button", { name: "Signing in…", exact: true }),
     ).toBeDisabled();
+    await expect(remember).toBeChecked();
+    await expect(remember).toBeDisabled();
     await expect(
         page.getByLabel("Email address", { exact: true }),
     ).toBeDisabled();
@@ -169,6 +192,54 @@ test("signs in once, restores the session on reload, guards guest pages and sign
         ),
     ).toBeVisible();
     await expect(page.getByLabel("Password", { exact: true })).toHaveValue("");
+    await expect(remember).not.toBeChecked();
+});
+
+test("preserves the choice through validation and allows opting out before retrying", async ({
+    page,
+}) => {
+    await page.goto("/login");
+    const remember = page.getByRole("checkbox", {
+        name: "Remember me for 30 days",
+    });
+    await remember.check();
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(
+        page.getByLabel("Email address", { exact: true }),
+    ).toBeFocused();
+    await expect(remember).toBeChecked();
+    await fillLogin(page);
+
+    for (const checked of [true, false]) {
+        await remember.setChecked(checked);
+        await page.route("**/api/login", async (route) => {
+            expect(route.request().postDataJSON()).toEqual({
+                email: user.email,
+                password,
+                remember: checked,
+            });
+            await route.fulfill({
+                status: 422,
+                json: {
+                    errors: {
+                        email: ["These credentials do not match our records."],
+                    },
+                },
+            });
+        });
+        const response = page.waitForResponse("**/api/login");
+        await page
+            .getByRole("button", { name: "Sign in", exact: true })
+            .click();
+        expect((await response).status()).toBe(422);
+        await expect(
+            page.getByLabel("Email address", { exact: true }),
+        ).toHaveAccessibleDescription(
+            "These credentials do not match our records.",
+        );
+        await expect(remember).toBeChecked({ checked });
+        await page.unroute("**/api/login");
+    }
 });
 
 test("honours rate limits without losing entered credentials", async ({
@@ -184,11 +255,16 @@ test("honours rate limits without losing entered credentials", async ({
     );
     await page.goto("/login");
     await fillLogin(page);
+    const remember = page.getByRole("checkbox", {
+        name: "Remember me for 30 days",
+    });
+    await remember.check();
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(
         page.getByText("Too many attempts", { exact: true }),
     ).toBeVisible();
     await expect(page.getByLabel("Password", { exact: true })).toBeDisabled();
+    await expect(remember).toBeDisabled();
     await page.clock.fastForward(4_000);
     await expect(
         page.getByText("Too many attempts", { exact: true }),
@@ -202,6 +278,8 @@ test("honours rate limits without losing entered credentials", async ({
     await expect(page.getByLabel("Password", { exact: true })).toHaveValue(
         password,
     );
+    await expect(remember).toBeChecked();
+    await expect(remember).toBeEnabled();
     await checkAccessibility(page);
 });
 
@@ -243,6 +321,10 @@ for (const failure of [
         });
         await page.goto("/login");
         await fillLogin(page);
+        const remember = page.getByRole("checkbox", {
+            name: "Remember me for 30 days",
+        });
+        await remember.check();
         await page
             .getByRole("button", { name: "Sign in", exact: true })
             .click();
@@ -256,6 +338,7 @@ for (const failure of [
         await expect(page.getByLabel("Password", { exact: true })).toHaveValue(
             password,
         );
+        await expect(remember).toBeChecked();
         expect(requests).toBe(failure === "csrf" ? 0 : 1);
         await page.route("**/sanctum/csrf-cookie", (route) =>
             route.fulfill({
@@ -267,6 +350,11 @@ for (const failure of [
             expect(route.request().headers()["x-xsrf-token"]).toBe(
                 "fresh-token",
             );
+            expect(route.request().postDataJSON()).toEqual({
+                email: user.email,
+                password,
+                remember: true,
+            });
             await authenticatedSession(page);
             await route.fulfill({ status: 204 });
         });
@@ -401,6 +489,21 @@ test("fits small screens and increased text size with reduced motion", async ({
             () => document.documentElement.scrollWidth > innerWidth,
         ),
     ).toBe(false);
+    const form = await page
+        .getByRole("form", { name: "Sign in", exact: true })
+        .boundingBox();
+    if (!form) throw new Error("Sign-in form is not visible");
+    for (const control of [
+        page.locator('label[for="remember"]'),
+        page.getByRole("link", { name: "Forgot password?", exact: true }),
+    ]) {
+        const bounds = await control.boundingBox();
+        if (!bounds) throw new Error("Sign-in control is not visible");
+        expect(bounds.x).toBeGreaterThanOrEqual(form.x - 1);
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(
+            form.x + form.width + 1,
+        );
+    }
     expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
     await checkAccessibility(page);
 });

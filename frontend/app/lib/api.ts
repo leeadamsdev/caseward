@@ -45,7 +45,10 @@ export async function sessionRequest(
     {
         method = "POST",
         values,
-    }: { method?: "POST" | "PATCH"; values?: Record<string, string> } = {},
+    }: {
+        method?: "POST" | "PATCH";
+        values?: Record<string, string | boolean>;
+    } = {},
 ): Promise<Response | ApiFailure> {
     const bootstrap = await apiRequest(request, "/sanctum/csrf-cookie");
     if (!(bootstrap instanceof Response)) return bootstrap;

@@ -97,11 +97,27 @@ export function LoginForm() {
                             errors={errors[field.name]}
                         />
                     ))}
-                    <div className="text-right">
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                        <label
+                            htmlFor="remember"
+                            className="inline-flex min-h-11 min-w-0 cursor-pointer items-start gap-2 py-2.5 text-sm leading-5 has-disabled:cursor-not-allowed has-disabled:opacity-55"
+                        >
+                            <input
+                                id="remember"
+                                name="remember"
+                                type="checkbox"
+                                value="on"
+                                defaultChecked={false}
+                                className="mt-0.5 size-4 shrink-0 cursor-pointer accent-primary disabled:cursor-not-allowed"
+                            />
+                            <span className="min-w-0 wrap-anywhere">
+                                Remember me for 30 days
+                            </span>
+                        </label>
                         <ButtonLink
                             to="/forgot-password"
                             variant="ghost"
-                            className="px-1 py-2 text-sm underline underline-offset-4"
+                            className="ml-auto max-w-full px-1 py-2 text-sm underline underline-offset-4"
                         >
                             Forgot password?
                         </ButtonLink>

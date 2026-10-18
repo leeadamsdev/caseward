@@ -22,6 +22,7 @@ class LoginRequest extends FormRequest
         return [
             'email' => $this->emailRules(),
             'password' => ['bail', 'required', 'string', 'max:128'],
+            'remember' => ['sometimes', 'boolean:strict'],
         ];
     }
 }

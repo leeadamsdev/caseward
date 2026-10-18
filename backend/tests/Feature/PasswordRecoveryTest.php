@@ -101,10 +101,11 @@ class PasswordRecoveryTest extends TestCase
         $this->browserRequest('GET', '/api/user')->assertForbidden()->assertJsonPath('code', 'email_unverified');
     }
 
-    public function test_reset_revokes_sessions_in_multiple_browsers_and_rejects_the_old_password(): void
+    #[DataProvider('rememberChoices')]
+    public function test_reset_revokes_sessions_in_multiple_browsers_and_rejects_the_old_password(bool $remember): void
     {
         $user = $this->user(verified: true);
-        $login = ['email' => $user->email, 'password' => 'correct horse battery staple'];
+        $login = ['email' => $user->email, 'password' => 'correct horse battery staple', 'remember' => $remember];
         $this->browserRequest('POST', '/api/login', $login)->assertNoContent();
         $first = $this->cookies;
         $this->cookies = [];
@@ -388,6 +389,13 @@ class PasswordRecoveryTest extends TestCase
     {
         yield 'existing account' => [true];
         yield 'unknown account' => [false];
+    }
+
+    /** @return iterable<string, array{bool}> */
+    public static function rememberChoices(): iterable
+    {
+        yield 'ordinary session' => [false];
+        yield 'remembered session' => [true];
     }
 
     private function queue(): RedisQueue

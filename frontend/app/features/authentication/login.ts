@@ -29,12 +29,12 @@ export type LoginResult = FormFailure<(typeof loginFields)[number]["name"]>;
 export async function signIn(
     request: Request,
 ): Promise<LoginResult | Response> {
-    const { values, errors } = requiredFields(
-        await request.formData(),
-        loginFields,
-    );
+    const formData = await request.formData();
+    const { values, errors } = requiredFields(formData, loginFields);
     if (Object.keys(errors).length > 0) return { status: "validation", errors };
-    const response = await sessionRequest(request, "/api/login", { values });
+    const response = await sessionRequest(request, "/api/login", {
+        values: { ...values, remember: formData.get("remember") === "on" },
+    });
     if (!(response instanceof Response)) return response;
     if (response.status === 204)
         return redirect(

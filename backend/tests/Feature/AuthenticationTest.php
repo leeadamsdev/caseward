@@ -49,7 +49,6 @@ class AuthenticationTest extends TestCase
         $login = $this->browserRequest('POST', '/api/login', [
             ...$this->credentials(),
             'email' => '  ALEX@EXAMPLE.COM  ',
-            'remember' => true,
         ])->assertNoContent();
 
         $sessionId = $login->getCookie($sessionName)?->getValue();
@@ -147,22 +146,24 @@ class AuthenticationTest extends TestCase
         $this->browserRequest('GET', '/api/user')->assertUnauthorized();
     }
 
-    public function test_changing_the_password_invalidates_existing_authentication(): void
+    #[DataProvider('rememberChoices')]
+    public function test_changing_the_password_invalidates_existing_authentication(bool $remember): void
     {
         $user = $this->createUser();
         $this->browserRequest('GET', '/sanctum/csrf-cookie');
-        $this->browserRequest('POST', '/api/login', $this->credentials())->assertNoContent();
+        $this->browserRequest('POST', '/api/login', [...$this->credentials(), 'remember' => $remember])->assertNoContent();
 
         $user->update(['password' => 'a different long passphrase']);
 
         $this->browserRequest('GET', '/api/user')->assertUnauthorized();
     }
 
-    public function test_deleted_users_cannot_continue_using_existing_sessions(): void
+    #[DataProvider('rememberChoices')]
+    public function test_deleted_users_cannot_continue_using_existing_sessions(bool $remember): void
     {
         $user = $this->createUser();
         $this->browserRequest('GET', '/sanctum/csrf-cookie');
-        $this->browserRequest('POST', '/api/login', $this->credentials())->assertNoContent();
+        $this->browserRequest('POST', '/api/login', [...$this->credentials(), 'remember' => $remember])->assertNoContent();
 
         $user->delete();
 
@@ -189,6 +190,13 @@ class AuthenticationTest extends TestCase
     {
         yield 'wrong password' => ['alex@example.com', 'a different long passphrase'];
         yield 'unknown email' => ['unknown@example.com', 'correct horse battery staple'];
+    }
+
+    /** @return iterable<string, array{bool}> */
+    public static function rememberChoices(): iterable
+    {
+        yield 'ordinary session' => [false];
+        yield 'remembered session' => [true];
     }
 
     /** @param array<string, mixed> $invalid */

@@ -8,6 +8,7 @@ use App\Http\Requests\LoginRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Validation\ValidationException;
 
 class SessionController
@@ -19,6 +20,10 @@ class SessionController
         }
 
         $request->session()->regenerate();
+        $request->session()->forget('auth.remember_until');
+        if ($request->boolean('remember')) {
+            $request->session()->put('auth.remember_until', now()->addMinutes(Config::integer('session.remember_lifetime'))->getTimestamp());
+        }
 
         return response()->noContent();
     }

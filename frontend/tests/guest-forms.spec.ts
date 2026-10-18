@@ -67,6 +67,11 @@ for (const form of forms) {
         for (const [label, value] of Object.entries(form.fields)) {
             await page.getByLabel(label, { exact: true }).fill(value);
         }
+        if (form.name === "sign-in") {
+            await page
+                .getByRole("checkbox", { name: "Remember me for 30 days" })
+                .check();
+        }
         await page.route("**/api/session", (route) =>
             route.fulfill({ status: 503, json: {} }),
         );
@@ -81,6 +86,13 @@ for (const form of forms) {
             await expect(page.getByLabel(label, { exact: true })).toHaveValue(
                 value,
             );
+        }
+        if (form.name === "sign-in") {
+            await expect(
+                page.getByRole("checkbox", {
+                    name: "Remember me for 30 days",
+                }),
+            ).toBeChecked();
         }
         await expect(
             page.getByRole("button", { name: form.submit, exact: true }),

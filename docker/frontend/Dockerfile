@@ -1,4 +1,4 @@
-FROM node:24.22.0-trixie-slim AS base
+FROM node:26.12.0-trixie-slim AS base
 
 RUN npm install --global pnpm@12.14.0 --allow-scripts=pnpm --no-fund
 

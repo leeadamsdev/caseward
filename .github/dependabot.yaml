@@ -28,6 +28,13 @@ updates:
     open-pull-requests-limit: 2
     commit-message:
       prefix: chore
+    ignore:
+      # Match Node types to the runtime; review Node majors together after LTS promotion.
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
+      # jest-dom's Assertion augmentation currently conflicts with Vitest 5's types.
+      - dependency-name: vitest
+        versions: ["5.x"]
     groups:
       frontend-dependencies:
         patterns: ["*"]
@@ -37,7 +44,7 @@ updates:
         patterns: ["*"]
 
   - package-ecosystem: github-actions
-    directory: /
+    directories: [/, /.github/actions/*]
     schedule:
       interval: weekly
       day: monday
@@ -60,6 +67,10 @@ updates:
     open-pull-requests-limit: 2
     commit-message:
       prefix: chore
+    ignore:
+      # Coordinate Node majors with package.json engines and @types/node after LTS review.
+      - dependency-name: node
+        update-types: [version-update:semver-major]
     groups:
       build-images:
         patterns: ["*"]

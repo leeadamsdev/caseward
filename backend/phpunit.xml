@@ -24,6 +24,7 @@
         <env name="MAIL_FROM_NAME" value="Caseward" force="true"/>
         <env name="MAIL_LOGO_URL" value="http://localhost:5173/logos/caseward-logo-light.png" force="true"/>
         <env name="BREVO_API_KEY" value="" force="true"/>
+        <env name="QUEUE_FAILED_DRIVER" value="null" force="true"/>
         <env name="SESSION_DRIVER" value="redis" force="true"/>
         <env name="SESSION_SECURE_COOKIE" value="false" force="true"/>
         <env name="CACHE_STORE" value="array" force="true"/>

@@ -23,7 +23,7 @@ class RegisterRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255', 'not_regex:/\x00/'],
             'email' => [...$this->emailRules(), 'unique:users,email'],
-            'password' => ['bail', 'required', 'string', Password::min(15)->max(128), 'confirmed'],
+            'password' => ['bail', 'required', 'string', Password::defaults(), 'confirmed'],
         ];
     }
 }

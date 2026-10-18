@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Mail\Mailer;
 use Illuminate\Mail\Transport\ArrayTransport;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Mail;
@@ -24,7 +25,9 @@ class VerificationMailTest extends TestCase
         $url = $mail->actionUrl;
 
         $user->notify($notification);
-        $transport = Mail::mailer()->getSymfonyTransport();
+        $mailer = Mail::mailer();
+        $this->assertInstanceOf(Mailer::class, $mailer);
+        $transport = $mailer->getSymfonyTransport();
         $this->assertInstanceOf(ArrayTransport::class, $transport);
         $sent = $transport->messages()->sole();
         $this->assertInstanceOf(SentMessage::class, $sent);

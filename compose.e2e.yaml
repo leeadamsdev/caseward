@@ -13,12 +13,14 @@ services:
     backend:
         image: caseward-e2e-backend
         ports: !reset []
-        volumes:
+        volumes: &e2e-backend-volumes
+            - ./backend:/var/www/app
+            - backend_vendor:/var/www/app/vendor
             - ./backend/.env.example:/var/www/app/.env:ro
-        tmpfs:
+        tmpfs: &e2e-backend-tmpfs
             - /var/www/app/storage:uid=${APP_UID:-1000},gid=${APP_GID:-1000},mode=0755
             - /var/www/app/bootstrap/cache:uid=${APP_UID:-1000},gid=${APP_GID:-1000},mode=0755
-        environment:
+        environment: &e2e-backend-environment
             APP_ENV: e2e
             APP_DEBUG: "false"
             APP_KEY: base64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
@@ -47,6 +49,12 @@ services:
             MAIL_FROM_ADDRESS: hello@caseward.test
             MAIL_LOGO_URL: http://127.0.0.1:4173/logos/caseward-logo-light.png
             BREVO_API_KEY: ""
+
+    worker:
+        image: caseward-e2e-backend
+        volumes: *e2e-backend-volumes
+        tmpfs: *e2e-backend-tmpfs
+        environment: *e2e-backend-environment
 
     mailpit:
         ports: !reset []

@@ -28,6 +28,9 @@ if (! $app->environment('e2e')
     || $config->get('database.redis.default.username') !== 'caseward_testing'
     || $config->get('database.redis.options.prefix') !== 'caseward_testing:e2e:'
     || ! in_array($config->get('database.redis.default.url'), [null, ''], true)
+    || $config->get('queue.default') !== 'redis'
+    || $config->get('queue.connections.redis.connection') !== 'default'
+    || $config->get('cache.stores.passwords.connection') !== 'default'
     || $config->get('mail.default') !== 'smtp'
     || $config->get('mail.mailers.smtp.host') !== 'mailpit'
     || $config->get('mail.mailers.smtp.port') !== 1025

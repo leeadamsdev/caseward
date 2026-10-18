@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\EmailVerificationController;
+use App\Http\Controllers\PasswordRecoveryController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\SessionController;
 use App\Http\Resources\UserResource;
@@ -12,6 +13,11 @@ use Illuminate\Support\Facades\Route;
 Route::post('/register', RegisterController::class)->middleware('throttle:5,1,register');
 
 Route::post('/login', [SessionController::class, 'store'])->middleware('throttle:login');
+
+Route::post('/forgot-password', [PasswordRecoveryController::class, 'store'])
+    ->middleware('throttle:password-email');
+Route::post('/reset-password', [PasswordRecoveryController::class, 'update'])
+    ->middleware('throttle:password-reset');
 
 Route::middleware('auth:web')->group(function (): void {
     Route::get('/session', fn (Request $request): UserResource => new UserResource($request->user()))

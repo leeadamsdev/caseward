@@ -13,6 +13,14 @@ use Tests\TestCase;
 
 class ConfigurationTest extends TestCase
 {
+    public function test_failed_jobs_cannot_be_written_into_the_development_journal_by_tests(): void
+    {
+        $configuration = Config::all();
+        Arr::set($configuration, 'queue.failed.driver', 'file');
+
+        $this->assertCachedConfigurationRejected($configuration, 'Refusing to write failed jobs outside the isolated test environment.');
+    }
+
     #[DataProvider('logoUrls')]
     public function test_mail_logo_configuration_supports_a_public_override_and_defaults_for_unset_or_empty_values(?string $override, string $expected): void
     {
@@ -109,5 +117,11 @@ class ConfigurationTest extends TestCase
         yield 'development key prefix' => ['database.redis.options.prefix', 'caseward:', 'Valkey'];
         yield 'invalid key prefix' => ['database.redis.options.prefix', 123, 'Valkey'];
         yield 'Redis URL override' => ['database.redis.default.url', 'redis://caseward:caseward_local@valkey:6379/0', 'Valkey'];
+        yield 'wrong queue driver' => ['queue.default', 'database', 'Valkey'];
+        yield 'wrong queue connection' => ['queue.connections.redis.connection', 'development', 'Valkey'];
+        yield 'wrong token store' => ['auth.passwords.users.store', 'redis', 'Valkey'];
+        yield 'wrong token driver' => ['auth.passwords.users.driver', 'database', 'Valkey'];
+        yield 'wrong password cache connection' => ['cache.stores.passwords.connection', 'development', 'Valkey'];
+        yield 'wrong password cache driver' => ['cache.stores.passwords.driver', 'file', 'Valkey'];
     }
 }

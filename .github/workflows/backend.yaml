@@ -54,7 +54,7 @@ jobs:
             backend.cache-to=type=gha,scope=caseward-backend,mode=max
 
       - name: Start services
-        run: docker compose up --no-build --wait --wait-timeout 300 backend
+        run: docker compose up --no-build --wait --wait-timeout 300 backend worker
 
       - name: Check backend
         run: docker compose exec -T backend composer check

@@ -37,8 +37,18 @@ if ($config->get('cache.limiter') !== 'redis'
     || ! is_string($redisPrefix)
     || ! str_starts_with($redisPrefix, 'caseward_testing:')
     || ! in_array($config->get('database.redis.default.url'), [null, ''], true)
+    || $config->get('queue.default') !== 'redis'
+    || $config->get('queue.connections.redis.connection') !== 'default'
+    || $config->get('cache.stores.passwords.connection') !== 'default'
+    || $config->get('cache.stores.passwords.driver') !== 'redis'
+    || $config->get('auth.passwords.users.driver') !== 'cache'
+    || $config->get('auth.passwords.users.store') !== 'passwords'
 ) {
     throw new LogicException('Refusing to run tests outside the isolated Valkey test database. Clear cached configuration with php artisan config:clear.');
+}
+
+if ($config->get('queue.failed.driver') !== null) {
+    throw new LogicException('Refusing to write failed jobs outside the isolated test environment.');
 }
 
 if ($config->get('mail.default') !== 'array'

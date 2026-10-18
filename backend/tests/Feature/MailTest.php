@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\User;
+use Illuminate\Mail\Mailer;
 use Illuminate\Mail\Message;
 use Illuminate\Mail\Transport\ArrayTransport;
 use Illuminate\Support\Facades\Config;
@@ -27,12 +28,16 @@ class MailTest extends TestCase
     {
         $this->assertSame('array', Config::get('mail.default'));
         $this->assertEmpty(Config::get('mail.mailers.brevo.key'));
-        $this->assertInstanceOf(ArrayTransport::class, Mail::mailer()->getSymfonyTransport());
+        $mailer = Mail::mailer();
+        $this->assertInstanceOf(Mailer::class, $mailer);
+        $this->assertInstanceOf(ArrayTransport::class, $mailer->getSymfonyTransport());
     }
 
     public function test_local_smtp_targets_mailpit_with_a_bounded_timeout(): void
     {
-        $transport = Mail::mailer('smtp')->getSymfonyTransport();
+        $mailer = Mail::mailer('smtp');
+        $this->assertInstanceOf(Mailer::class, $mailer);
+        $transport = $mailer->getSymfonyTransport();
         $this->assertInstanceOf(EsmtpTransport::class, $transport);
         $stream = $transport->getStream();
         $this->assertInstanceOf(SocketStream::class, $stream);

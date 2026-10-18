@@ -15,6 +15,10 @@
     </testsuites>
     <php>
         <env name="APP_ENV" value="testing" force="true"/>
+        <env name="HASH_DRIVER" value="argon2id" force="true"/>
+        <env name="ARGON_MEMORY" value="1024" force="true"/>
+        <env name="ARGON_TIME" value="1" force="true"/>
+        <env name="ARGON_THREADS" value="1" force="true"/>
         <env name="APP_URL" value="http://localhost:5173" force="true"/>
         <env name="APP_KEY" value="base64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=" force="true"/>
         <env name="MAIL_MAILER" value="array" force="true"/>

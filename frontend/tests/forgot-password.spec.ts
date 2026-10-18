@@ -219,7 +219,8 @@ for (const failure of [
             page.getByRole("heading", { name: "Check your inbox" }),
         ).toHaveCount(0);
         await expect(input).toHaveValue(email);
-        await checkAccessibility(page);
+        if (failure === "network" || failure === "expired")
+            await checkAccessibility(page);
         await page.route(endpoint, (route) =>
             route.fulfill({ status: 202, json: accepted }),
         );

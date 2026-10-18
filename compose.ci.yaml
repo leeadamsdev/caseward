@@ -1,0 +1,20 @@
+services:
+    backend:
+        healthcheck:
+            start_interval: 1s
+        environment:
+            COMPOSER_CACHE_DIR: /cache/composer
+        volumes:
+            - ${CI_CACHE_DIR:?Set CI_CACHE_DIR to an isolated CI cache directory}/composer:/cache/composer
+    frontend:
+        healthcheck:
+            start_interval: 1s
+        environment:
+            pnpm_config_store_dir: /cache/pnpm
+            pnpm_config_cache_dir: /cache/pnpm-metadata
+        volumes:
+            - ${CI_CACHE_DIR:?Set CI_CACHE_DIR to an isolated CI cache directory}/pnpm:/cache/pnpm
+            - ${CI_CACHE_DIR:?Set CI_CACHE_DIR to an isolated CI cache directory}/pnpm-metadata:/cache/pnpm-metadata
+    worker:
+        healthcheck:
+            start_interval: 1s

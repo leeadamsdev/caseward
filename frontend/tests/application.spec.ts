@@ -61,6 +61,7 @@ test("handles unknown deep links and returns home using the keyboard", async ({
 test("renders accessible loading before JavaScript has downloaded", async ({
     page,
 }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
     let resume = () => {};
     const download = new Promise<void>((resolve) => {
         resume = resolve;

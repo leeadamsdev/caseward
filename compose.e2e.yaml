@@ -6,6 +6,10 @@ services:
             args:
                 PLAYWRIGHT_VERSION: ${PLAYWRIGHT_VERSION:?Use the frontend test:e2e command}
         ports: !reset []
+        command:
+            ["sh", "-c", "touch /tmp/caseward-e2e-ready && exec sleep infinity"]
+        healthcheck:
+            test: ["CMD", "test", "-f", "/tmp/caseward-e2e-ready"]
         environment:
             CASEWARD_E2E: "1"
             CI: "true"

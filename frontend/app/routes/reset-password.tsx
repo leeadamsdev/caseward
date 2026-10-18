@@ -1,8 +1,6 @@
 import { ResetPasswordForm } from "~/features/password-recovery/reset-password-form";
-import {
-    resetLink,
-    resetPassword,
-} from "~/features/password-recovery/reset-password";
+import { resetLink } from "~/features/password-recovery/reset-link";
+import { resetPassword } from "~/features/password-recovery/reset-password";
 import type { Route } from "./+types/reset-password";
 
 export function meta() {

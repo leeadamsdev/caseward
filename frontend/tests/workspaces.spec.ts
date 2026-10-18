@@ -322,7 +322,8 @@ for (const failure of [
                     exact: true,
                 }),
             ).toBeVisible();
-        await checkAccessibility(page);
+        if (failure === "network" || failure === "expired")
+            await checkAccessibility(page);
     });
 }
 

@@ -11,6 +11,7 @@ const compose = [
     project,
     "-f",
     "compose.yaml",
+    ...(process.env.CASEWARD_CI === "1" ? ["-f", "compose.ci.yaml"] : []),
     "-f",
     "compose.e2e.yaml",
 ];

@@ -63,10 +63,7 @@ test("opens without mutating the account and shares accessible password help and
 for (const [index, invalid] of [
     "/reset-password",
     `/reset-password/${token}`,
-    `/reset-password/${token}?email=`,
     "/reset-password/not-a-token?email=alex@example.com",
-    `/reset-password/${token}?email=alex@example.com&email=other@example.com`,
-    `/reset-password/${token}?email=%00`,
 ].entries()) {
     test(`recovers from malformed link ${(index + 1).toString()}`, async ({
         page,

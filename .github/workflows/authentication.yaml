@@ -1,22 +1,7 @@
 name: Authentication
 
 on:
-  push:
-    paths:
-      - "backend/**"
-      - "frontend/**"
-      - "docker/**"
-      - "compose.yaml"
-      - "compose.e2e.yaml"
-      - ".github/workflows/authentication.yaml"
-      - ".editorconfig"
-      - ".gitattributes"
-  pull_request:
-  workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_call:
 
 permissions:
   contents: read
@@ -25,16 +10,25 @@ jobs:
   authentication:
     runs-on: ubuntu-26.04
     timeout-minutes: 15
+    env:
+      CASEWARD_CI: "1"
+      DOCKER_BUILD_RECORD_UPLOAD: "false"
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
+      - uses: ./.github/actions/dependency-cache
+        id: dependencies
+        with:
+          backend: "true"
+          frontend: "true"
+
       - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version-file: frontend/package.json
+          node-version: ${{ steps.dependencies.outputs.node-version }}
           package-manager-cache: false
 
       - name: Configure container builds
@@ -49,7 +43,7 @@ jobs:
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Generate build configuration
-        run: docker compose -f compose.yaml -f compose.e2e.yaml build --print backend frontend > "$RUNNER_TEMP/authentication-bake.json"
+        run: docker compose -f compose.yaml -f compose.ci.yaml -f compose.e2e.yaml build --print backend frontend > "$RUNNER_TEMP/authentication-bake.json"
 
       - name: Build images using existing CI caches
         uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7.5.0
@@ -62,18 +56,20 @@ jobs:
           load: true
           set: |
             backend.cache-from=type=gha,scope=caseward-backend
+            backend.cache-to=type=gha,scope=caseward-backend,mode=max
             frontend.cache-from=type=gha,scope=caseward-frontend
+            frontend.cache-to=type=gha,scope=caseward-frontend,mode=max
 
       - name: Run isolated authentication smoke test
         run: node frontend/tests/e2e/run.ts --no-build
 
-      - name: Upload browser test results
-        if: ${{ !cancelled() }}
+      - name: Upload failed browser test results
+        if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: authentication-browser-tests
           path: |
             frontend/playwright-report/e2e/
             frontend/test-results/e2e/
-          retention-days: 7
+          retention-days: 3
           if-no-files-found: ignore

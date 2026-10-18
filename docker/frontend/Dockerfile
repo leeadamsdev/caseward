@@ -2,6 +2,13 @@ FROM node:24.22.0-trixie-slim AS base
 
 RUN npm install --global pnpm@12.14.0 --allow-scripts=pnpm --no-fund
 
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ARG PLAYWRIGHT_VERSION
+RUN if [ -n "$PLAYWRIGHT_VERSION" ]; then \
+        pnpm dlx "playwright@$PLAYWRIGHT_VERSION" install --with-deps --only-shell chromium \
+        && rm -rf /var/lib/apt/lists/*; \
+    fi
+
 ARG APP_UID=1000
 ARG APP_GID=1000
 
@@ -19,14 +26,7 @@ CMD ["pnpm", "run", "dev", "--host", "0.0.0.0", "--port", "5173"]
 
 FROM base AS browser-tests
 
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-
-USER root
-ARG PLAYWRIGHT_VERSION
-RUN test -n "$PLAYWRIGHT_VERSION" \
-    && pnpm dlx "playwright@$PLAYWRIGHT_VERSION" install --with-deps --only-shell chromium \
-    && rm -rf /var/lib/apt/lists/*
-USER node
+RUN test -n "$PLAYWRIGHT_VERSION"
 
 # Keep browser tooling out of the default development image.
 FROM base AS development

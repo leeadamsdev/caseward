@@ -34,6 +34,7 @@ test.afterEach(async ({ page }) => {
 test("renders an accessible error screen and reloads the current page to recover", async ({
     page,
 }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
     await openErrorPage(page);
     await expect(page.locator(".brand-wave-top")).toHaveCSS(
         "animation-name",

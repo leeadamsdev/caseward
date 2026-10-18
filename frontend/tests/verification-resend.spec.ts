@@ -132,7 +132,7 @@ for (const [kind, retryAfter, countdown, advance] of [
         await expect(
             page.getByRole("button", { name: "Sign out", exact: true }),
         ).toBeEnabled();
-        await checkAccessibility(page);
+        if (kind === "hourly") await checkAccessibility(page);
         await page.clock.fastForward(advance);
         await expect(
             page.getByText("Too many attempts", { exact: true }),

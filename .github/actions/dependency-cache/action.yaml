@@ -1,0 +1,51 @@
+name: Cache locked dependencies
+description: Share package download caches across checks and the Docker integration job.
+inputs:
+  backend:
+    default: "false"
+    description: Restore Composer downloads.
+  frontend:
+    default: "false"
+    description: Restore pnpm's content-addressed store.
+outputs:
+  node-version:
+    description: The exact Node.js version used by the frontend Docker image.
+    value: ${{ steps.toolchain.outputs.node }}
+runs:
+  using: composite
+  steps:
+    - name: Prepare cache directories
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: |
+        echo "CI_CACHE_DIR=$RUNNER_TEMP/caseward-cache" >> "$GITHUB_ENV"
+        mkdir -p "$RUNNER_TEMP/caseward-cache/composer" "$RUNNER_TEMP/caseward-cache/pnpm" "$RUNNER_TEMP/caseward-cache/pnpm-metadata"
+    - name: Cache Composer downloads
+      if: inputs.backend == 'true'
+      uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+      with:
+        path: ${{ runner.temp }}/caseward-cache/composer
+        key: composer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('docker/backend/Dockerfile') }}-${{ hashFiles('backend/composer.lock') }}
+        restore-keys: composer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('docker/backend/Dockerfile') }}-
+    - name: Identify frontend toolchain
+      if: inputs.frontend == 'true'
+      id: toolchain
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: |
+        node --input-type=module -e '
+          import { readFileSync } from "node:fs";
+          const version = /^FROM node:([\d.]+)-/m.exec(readFileSync("docker/frontend/Dockerfile", "utf8"))?.[1];
+          if (!version) throw new Error("Frontend Dockerfile must pin its Node.js version");
+          const pkg = JSON.parse(readFileSync("frontend/package.json", "utf8"));
+          console.log(`node=${version}\nfrontend=${pkg.packageManager}-${version}`);
+        ' >> "$GITHUB_OUTPUT"
+    - name: Cache pnpm downloads
+      if: inputs.frontend == 'true'
+      uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+      with:
+        path: |
+          ${{ runner.temp }}/caseward-cache/pnpm
+          ${{ runner.temp }}/caseward-cache/pnpm-metadata
+        key: pnpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.frontend }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+        restore-keys: pnpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.frontend }}-

@@ -215,6 +215,7 @@ test.describe("password help on touch devices", () => {
 test("animates the background and respects reduced motion", async ({
     page,
 }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
     const waves = page.locator(".brand-wave");
     const initialTransform = await waves
         .first()

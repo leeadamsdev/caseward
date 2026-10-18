@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 3
+    outputs:
+      backend: ${{ steps.changes.outputs.backend }}
+      frontend: ${{ steps.changes.outputs.frontend }}
+      integration: ${{ steps.changes.outputs.integration }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Test change selection
+        run: node --test .github/scripts/*.test.mjs
+      - name: Select affected jobs
+        id: changes
+        run: node .github/scripts/changes.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    uses: ./.github/workflows/backend.yaml
+
+  frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    uses: ./.github/workflows/frontend.yaml
+
+  integration:
+    needs: changes
+    if: needs.changes.outputs.integration == 'true'
+    uses: ./.github/workflows/authentication.yaml
+
+  checks:
+    name: Required checks
+    if: always()
+    needs: [changes, backend, frontend, integration]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 1
+    steps:
+      - name: Verify all selected jobs passed
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          BACKEND: ${{ needs.backend.result }}
+          FRONTEND: ${{ needs.frontend.result }}
+          INTEGRATION: ${{ needs.integration.result }}
+          EXPECT_BACKEND: ${{ needs.changes.outputs.backend }}
+          EXPECT_FRONTEND: ${{ needs.changes.outputs.frontend }}
+          EXPECT_INTEGRATION: ${{ needs.changes.outputs.integration }}
+        run: |
+          test "$CHANGES" = success
+          check() {
+            case "$1:$2" in
+              true:success|false:skipped) ;;
+              *) return 1 ;;
+            esac
+          }
+          check "$EXPECT_BACKEND" "$BACKEND"
+          check "$EXPECT_FRONTEND" "$FRONTEND"
+          check "$EXPECT_INTEGRATION" "$INTEGRATION"

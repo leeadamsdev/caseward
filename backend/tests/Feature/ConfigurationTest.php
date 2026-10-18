@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Hash;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Symfony\Component\Process\Process;
@@ -13,6 +14,30 @@ use Tests\TestCase;
 
 class ConfigurationTest extends TestCase
 {
+    public function test_test_hashes_keep_argon2id_with_an_isolated_lower_work_factor(): void
+    {
+        $info = password_get_info(Hash::make('test fixture passphrase'));
+        $this->assertSame('argon2id', $info['algoName']);
+        $this->assertSame(['memory_cost' => 1024, 'time_cost' => 1, 'threads' => 1], $info['options']);
+    }
+
+    public function test_normal_hashing_configuration_keeps_the_production_work_factor(): void
+    {
+        $process = new Process(
+            [PHP_BINARY, '-r', 'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->loadEnvironmentFrom(".env.example"); $app->bootstrapWith([Illuminate\Foundation\Bootstrap\LoadEnvironmentVariables::class, Illuminate\Foundation\Bootstrap\LoadConfiguration::class]); echo json_encode($app->make(Illuminate\Contracts\Config\Repository::class)->get("hashing"), JSON_THROW_ON_ERROR);'],
+            base_path(),
+            ['APP_ENV' => 'production', 'HASH_DRIVER' => false, 'ARGON_MEMORY' => false, 'ARGON_TIME' => false, 'ARGON_THREADS' => false],
+        );
+        $process->mustRun();
+        $config = json_decode($process->getOutput(), true, flags: JSON_THROW_ON_ERROR);
+        $this->assertIsArray($config);
+        $this->assertSame('argon2id', $config['driver']);
+        $this->assertIsArray($config['argon']);
+        $this->assertSame(65536, $config['argon']['memory']);
+        $this->assertSame(4, $config['argon']['time']);
+        $this->assertSame(1, $config['argon']['threads']);
+    }
+
     public function test_failed_jobs_cannot_be_written_into_the_development_journal_by_tests(): void
     {
         $configuration = Config::all();

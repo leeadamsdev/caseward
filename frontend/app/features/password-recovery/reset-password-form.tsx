@@ -12,11 +12,8 @@ import { useFormFeedback } from "~/components/forms/use-form-feedback";
 import { ButtonLink } from "~/components/ui/button";
 import { Notice } from "~/components/ui/notice";
 import { CardHeading } from "~/components/layout/card-page";
-import {
-    resetFields,
-    type ResetLink,
-    type ResetResult,
-} from "./reset-password";
+import { resetFields, type ResetResult } from "./reset-password";
+import type { ResetLink } from "./reset-link";
 
 export function ResetPasswordForm({ link }: { link: ResetLink | undefined }) {
     const fetcher = useFetcher<ResetResult>();

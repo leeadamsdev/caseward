@@ -1,5 +1,6 @@
 import { newPasswordFields } from "~/components/forms/new-password-fields";
 import { guestLoader } from "~/features/authentication/session";
+import { resetLink } from "./reset-link";
 import {
     isRecord,
     rateLimit,
@@ -19,26 +20,10 @@ export const resetFields = [
     { ...newPasswordFields[1], label: "Confirm new password" },
 ] as const;
 
-export type ResetLink = { token: string; email: string };
 export type ResetResult =
     | FormFailure<(typeof resetFields)[number]["name"]>
     | { status: "reset" }
     | { status: "invalid" };
-
-export function resetLink(url: URL): ResetLink | undefined {
-    const token = /^\/reset-password\/([a-f0-9]{64})$/.exec(url.pathname)?.[1];
-    const addresses = url.searchParams.getAll("email");
-    const email = addresses[0];
-    if (
-        !token ||
-        addresses.length !== 1 ||
-        !email?.trim() ||
-        email.length > 254 ||
-        email.includes("\0")
-    )
-        return;
-    return { token, email };
-}
 
 export async function resetPassword(
     request: Request,

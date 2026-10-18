@@ -1,4 +1,4 @@
-import { AuthShell } from "~/features/authentication/auth-shell";
+import { CardPage } from "~/components/layout/card-page";
 import { SessionError } from "~/features/authentication/session-error";
 import { VerificationWaiting } from "~/features/email-verification/verification-waiting";
 import {
@@ -14,12 +14,12 @@ export function meta() {
 }
 export default function VerifyEmail({ loaderData }: Route.ComponentProps) {
     return (
-        <AuthShell>
+        <CardPage>
             {loaderData.status === "error" ? (
                 <SessionError />
             ) : (
                 <VerificationWaiting user={loaderData.user} />
             )}
-        </AuthShell>
+        </CardPage>
     );
 }

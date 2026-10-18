@@ -40,7 +40,7 @@ export async function signIn(
         return redirect(
             verificationPath(
                 new URL(request.url).searchParams.get("returnTo"),
-            ) ?? "/account",
+            ) ?? "/workspaces",
         );
     if (response.status === 429) return rateLimit(response);
     if (response.status === 419) return { status: "error", reason: "expired" };

@@ -1,5 +1,24 @@
 import type { Page } from "@playwright/test";
 import type { User } from "../app/features/authentication/session";
+import type { Workspace } from "../app/features/workspaces/workspaces";
+
+export async function mockWorkspaces(page: Page, items: Workspace[] = []) {
+    await page.route("**/api/workspaces?*", (route) => {
+        const current = Number(
+            new URL(route.request().url()).searchParams.get("page"),
+        );
+        return route.fulfill({
+            json: {
+                data: items.slice((current - 1) * 25, current * 25),
+                meta: {
+                    current_page: current,
+                    last_page: Math.max(1, Math.ceil(items.length / 25)),
+                    total: items.length,
+                },
+            },
+        });
+    });
+}
 
 export async function mockBrowserSession(page: Page) {
     // Never let an unexpected API call reach a real backend during browser tests.
@@ -28,6 +47,7 @@ export async function mockBrowserSession(page: Page) {
             },
         }),
     );
+    await mockWorkspaces(page);
 }
 
 export async function mockSignedInSession(page: Page, user: User) {

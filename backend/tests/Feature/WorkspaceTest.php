@@ -35,6 +35,7 @@ class WorkspaceTest extends TestCase
         $suppliedId = Str::lower((string) Str::ulid());
 
         $response = $this->browserRequest('POST', '/api/workspaces', [
+            'account_id' => $user->id,
             'name' => '  Acme Support  ',
             'id' => $suppliedId,
             'user_id' => $other->id,
@@ -63,11 +64,11 @@ class WorkspaceTest extends TestCase
         $first = $this->user();
         $this->signIn($first);
         for ($i = 0; $i < 2; $i++) {
-            $this->browserRequest('POST', '/api/workspaces', ['name' => 'Acme'])->assertCreated();
+            $this->browserRequest('POST', '/api/workspaces', ['name' => 'Acme', 'account_id' => $first->id])->assertCreated();
         }
         $second = $this->user();
         $this->signIn($second);
-        $this->browserRequest('POST', '/api/workspaces', ['name' => 'Acme'])->assertCreated();
+        $this->browserRequest('POST', '/api/workspaces', ['name' => 'Acme', 'account_id' => $second->id])->assertCreated();
 
         $this->assertSame(2, $first->workspaces()->count());
         $this->assertSame(1, $second->workspaces()->count());
@@ -78,8 +79,9 @@ class WorkspaceTest extends TestCase
     #[DataProvider('validNames')]
     public function test_valid_names_are_normalized_without_losing_unicode(string $name, string $expected): void
     {
-        $this->signIn($this->user());
-        $this->browserRequest('POST', '/api/workspaces', ['name' => $name])
+        $user = $this->user();
+        $this->signIn($user);
+        $this->browserRequest('POST', '/api/workspaces', ['name' => $name, 'account_id' => $user->id])
             ->assertCreated()->assertJsonPath('data.name', $expected);
         $this->assertDatabaseHas('workspaces', ['name' => $expected]);
     }
@@ -95,8 +97,9 @@ class WorkspaceTest extends TestCase
     #[DataProvider('invalidNames')]
     public function test_invalid_names_do_not_create_workspaces_or_memberships(mixed $name): void
     {
-        $this->signIn($this->user());
-        $this->browserRequest('POST', '/api/workspaces', ['name' => $name])
+        $user = $this->user();
+        $this->signIn($user);
+        $this->browserRequest('POST', '/api/workspaces', ['name' => $name, 'account_id' => $user->id])
             ->assertUnprocessable()->assertJsonValidationErrors('name');
         $this->assertDatabaseCount('workspaces', 0);
         $this->assertDatabaseCount('workspace_memberships', 0);
@@ -119,13 +122,14 @@ class WorkspaceTest extends TestCase
 
     public function test_membership_failure_rolls_back_the_workspace_and_reports_the_error(): void
     {
-        $this->signIn($this->user());
+        $user = $this->user();
+        $this->signIn($user);
         Config::set('app.debug', false);
         Exceptions::fake();
         $failure = new RuntimeException('Membership storage failed.');
         Event::listen('eloquent.creating: '.WorkspaceMembership::class, static fn () => throw $failure);
 
-        $this->browserRequest('POST', '/api/workspaces', ['name' => 'Acme'])
+        $this->browserRequest('POST', '/api/workspaces', ['name' => 'Acme', 'account_id' => $user->id])
             ->assertInternalServerError()->assertDontSee($failure->getMessage());
 
         Exceptions::assertReported(fn (RuntimeException $exception): bool => $exception === $failure);
@@ -135,12 +139,13 @@ class WorkspaceTest extends TestCase
 
     public function test_cancelled_membership_creation_does_not_leave_an_orphaned_workspace(): void
     {
-        $this->signIn($this->user());
+        $user = $this->user();
+        $this->signIn($user);
         Config::set('app.debug', false);
         Exceptions::fake();
         Event::listen('eloquent.creating: '.WorkspaceMembership::class, static fn (): bool => false);
 
-        $response = $this->browserRequest('POST', '/api/workspaces', ['name' => 'Acme']);
+        $response = $this->browserRequest('POST', '/api/workspaces', ['name' => 'Acme', 'account_id' => $user->id]);
 
         $this->assertDatabaseCount('workspaces', 0);
         $this->assertDatabaseCount('workspace_memberships', 0);
@@ -243,9 +248,11 @@ class WorkspaceTest extends TestCase
 
     public function test_creation_requires_csrf_and_rejects_untrusted_origins(): void
     {
-        $this->signIn($this->user());
-        $this->browserRequest('POST', '/api/workspaces', ['name' => 'Acme'], csrf: false)->assertStatus(419);
-        $this->browserRequest('POST', '/api/workspaces', ['name' => 'Acme'], headers: ['Origin' => 'https://attacker.example'])->assertUnauthorized();
+        $user = $this->user();
+        $this->signIn($user);
+        $input = ['name' => 'Acme', 'account_id' => $user->id];
+        $this->browserRequest('POST', '/api/workspaces', $input, csrf: false)->assertStatus(419);
+        $this->browserRequest('POST', '/api/workspaces', $input, headers: ['Origin' => 'https://attacker.example'])->assertUnauthorized();
         $this->assertDatabaseCount('workspaces', 0);
     }
 
@@ -254,16 +261,47 @@ class WorkspaceTest extends TestCase
         $user = $this->user();
         $this->signIn($user);
         for ($i = 0; $i < 5; $i++) {
-            $this->browserRequest('POST', '/api/workspaces', ['name' => 'Acme'])->assertCreated();
+            $this->browserRequest('POST', '/api/workspaces', ['name' => 'Acme', 'account_id' => $user->id])->assertCreated();
         }
         Redis::purge();
         $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.2']);
         $this->signIn($user);
-        $this->browserRequest('POST', '/api/workspaces', ['name' => 'Acme'])->assertTooManyRequests()->assertHeader('Retry-After');
+        $this->browserRequest('POST', '/api/workspaces', ['name' => 'Acme', 'account_id' => $user->id])->assertTooManyRequests()->assertHeader('Retry-After');
         $this->assertDatabaseCount('workspaces', 5);
         $this->browserRequest('GET', '/api/workspaces')->assertOk()->assertJsonPath('meta.total', 5);
+        $other = $this->user();
+        $this->signIn($other);
+        $this->browserRequest('POST', '/api/workspaces', ['name' => 'Acme', 'account_id' => $other->id])->assertCreated();
+    }
+
+    public function test_a_stale_form_cannot_create_a_workspace_for_a_different_signed_in_account(): void
+    {
+        $original = $this->user();
+        $this->signIn($original);
         $this->signIn($this->user());
-        $this->browserRequest('POST', '/api/workspaces', ['name' => 'Acme'])->assertCreated();
+        $this->browserRequest('POST', '/api/workspaces', ['name' => 'Private project', 'account_id' => $original->id])
+            ->assertStatus(409)->assertJsonPath('code', 'account_context_changed');
+        $this->assertDatabaseCount('workspaces', 0);
+        $this->assertDatabaseCount('workspace_memberships', 0);
+    }
+
+    #[DataProvider('invalidAccountContexts')]
+    public function test_creation_requires_a_valid_account_context(mixed $accountId): void
+    {
+        $this->signIn($this->user());
+        $this->browserRequest('POST', '/api/workspaces', ['name' => 'Acme', 'account_id' => $accountId])
+            ->assertUnprocessable()->assertJsonValidationErrors('account_id');
+        $this->assertDatabaseCount('workspaces', 0);
+    }
+
+    /** @return iterable<string, array{mixed}> */
+    public static function invalidAccountContexts(): iterable
+    {
+        yield 'missing' => [null];
+        yield 'zero' => [0];
+        yield 'negative' => [-1];
+        yield 'array' => [[1]];
+        yield 'malformed' => ['unexpected'];
     }
 
     #[DataProvider('invalidMemberships')]

@@ -89,7 +89,7 @@ test("registers, verifies, signs in and recovers the password through Mailpit", 
         .click();
     await expect(page).toHaveURL("/verify-email");
     await expect(page.getByText(email, { exact: true })).toBeVisible();
-    await page.goto("/account");
+    await page.goto("/workspaces");
     await expect(page).toHaveURL("/verify-email");
 
     const protectedStatus = () =>
@@ -128,19 +128,21 @@ test("registers, verifies, signs in and recovers the password through Mailpit", 
     await expect(
         page.getByRole("heading", { name: "Email verified", exact: true }),
     ).toBeVisible();
-    await page.getByRole("link", { name: "Continue to your account" }).click();
-    await expect(page).toHaveURL("/account");
+    await page.getByRole("link", { name: "Continue to workspaces" }).click();
+    await expect(page).toHaveURL("/workspaces/new");
     await page.reload();
-    await expect(page.getByText(name, { exact: true })).toBeVisible();
+    await expect(
+        page.getByRole("heading", { name: "Create a workspace", exact: true }),
+    ).toBeVisible();
     await expect(page.getByText(email, { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect(page).toHaveURL("/login");
-    await page.goto("/account");
+    await page.goto("/workspaces");
     await expect(page).toHaveURL("/login?reason=session");
     await page.getByLabel("Email address", { exact: true }).fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page).toHaveURL("/account");
+    await expect(page).toHaveURL("/workspaces/new");
     const ordinaryCookie = (await page.context().cookies()).find(
         (cookie) => cookie.name === "caseward_session",
     );
@@ -210,7 +212,7 @@ test("registers, verifies, signs in and recovers the password through Mailpit", 
             .getByRole("button", { name: "Sign in", exact: true })
             .click();
         const deadline = await sessionCookieExpiry(await signInResponse);
-        await expect(previousPage).toHaveURL("/account");
+        await expect(previousPage).toHaveURL("/workspaces/new");
         const rememberedCookie = (await previousSession.cookies()).find(
             (cookie) => cookie.name === "caseward_session",
         );
@@ -224,8 +226,8 @@ test("registers, verifies, signs in and recovers the password through Mailpit", 
         previousSession = await openRememberedBrowser();
         previousPage = await previousSession.newPage();
         const restoredSession = previousPage.waitForResponse("**/api/session");
-        await previousPage.goto("/account");
-        await expect(previousPage).toHaveURL("/account");
+        await previousPage.goto("/workspaces");
+        await expect(previousPage).toHaveURL("/workspaces/new");
         await expect(
             previousPage.getByText(email, { exact: true }),
         ).toBeVisible();
@@ -268,7 +270,7 @@ test("registers, verifies, signs in and recovers the password through Mailpit", 
             expect(content).not.toContain(password);
             expect(content).not.toContain(newPassword);
         }
-        await previousPage.goto("/account");
+        await previousPage.goto("/workspaces");
         await expect(previousPage).toHaveURL("/login?reason=session");
 
         await page
@@ -288,7 +290,53 @@ test("registers, verifies, signs in and recovers the password through Mailpit", 
         await page
             .getByRole("button", { name: "Sign in", exact: true })
             .click();
-        await expect(page).toHaveURL("/account");
+        await expect(page).toHaveURL("/workspaces/new");
+        await page
+            .getByLabel("Workspace name", { exact: true })
+            .fill("Authentication smoke workspace");
+        await page
+            .getByRole("button", { name: "Create workspace", exact: true })
+            .click();
+        await expect(page).toHaveURL(/\/w\/[0-7][0-9a-hjkmnp-tv-z]{25}$/);
+        await expect(
+            page.getByRole("heading", {
+                name: "Authentication smoke workspace",
+                exact: true,
+            }),
+        ).toBeVisible();
+        const workspaceUrl = page.url();
+        await page.reload();
+        await expect(page).toHaveURL(workspaceUrl);
+        await page
+            .getByRole("link", { name: "Choose a workspace", exact: true })
+            .click();
+        await expect(page).toHaveURL("/workspaces");
+        await page.goto("/login");
+        await expect(page).toHaveURL("/workspaces");
+        await page
+            .getByRole("link", {
+                name: "Open Authentication smoke workspace",
+                exact: true,
+            })
+            .click();
+        await expect(page).toHaveURL(workspaceUrl);
+        await page
+            .getByRole("button", { name: "Sign out", exact: true })
+            .click();
+        await expect(page).toHaveURL("/login");
+
+        await page.getByLabel("Email address", { exact: true }).fill(email);
+        await page.getByLabel("Password", { exact: true }).fill(newPassword);
+        await page
+            .getByRole("button", { name: "Sign in", exact: true })
+            .click();
+        await expect(page).toHaveURL("/workspaces");
+        await expect(
+            page.getByRole("link", {
+                name: "Open Authentication smoke workspace",
+                exact: true,
+            }),
+        ).toBeVisible();
         await page
             .getByRole("button", { name: "Sign out", exact: true })
             .click();

@@ -157,8 +157,7 @@ test("signs in once, restores the session on reload, guards guest pages and sign
     await page.keyboard.press("Enter");
     expect(requests).toBe(1);
     release?.();
-    await expect(page).toHaveURL("/account");
-    await expect(page.getByText(user.name, { exact: true })).toBeVisible();
+    await expect(page).toHaveURL("/workspaces/new");
     await expect(page.getByText(user.email, { exact: true })).toBeVisible();
     await expect(page.locator("input[type=password]")).toHaveCount(0);
     await page.reload();
@@ -167,7 +166,7 @@ test("signs in once, restores the session on reload, guards guest pages and sign
     ).toBeVisible();
     for (const path of ["/register", "/login"]) {
         await page.goto(path);
-        await expect(page).toHaveURL("/account");
+        await expect(page).toHaveURL("/workspaces/new");
     }
     await checkAccessibility(page);
     expect(
@@ -184,7 +183,7 @@ test("signs in once, restores the session on reload, guards guest pages and sign
     });
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect(page).toHaveURL("/login");
-    await page.goto("/account");
+    await page.goto("/workspaces");
     await expect(page).toHaveURL("/login?reason=session");
     await expect(
         page.getByText(
@@ -361,11 +360,11 @@ for (const failure of [
         await page
             .getByRole("button", { name: "Sign in", exact: true })
             .click();
-        await expect(page).toHaveURL("/account");
+        await expect(page).toHaveURL("/workspaces/new");
     });
 }
 
-for (const path of ["/login", "/account"]) {
+for (const path of ["/login", "/workspaces"]) {
     test(`does not confuse a failed session check with being signed out at ${path}`, async ({
         page,
     }) => {
@@ -400,7 +399,7 @@ test("keeps sign-out failures recoverable and handles a session expiring", async
     await page.route("**/api/logout", (route) =>
         route.fulfill({ status: 419, json: {} }),
     );
-    await page.goto("/account");
+    await page.goto("/workspaces");
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect(page.getByRole("alert")).toBeFocused();
     await expect(
@@ -425,7 +424,7 @@ for (const failure of ["network", "malformed"]) {
                     },
                 });
         });
-        await page.goto("/account");
+        await page.goto("/workspaces");
         await expect(
             page.getByRole("heading", {
                 name: "Connection problem",
@@ -466,7 +465,7 @@ test("treats an already expired session as signed out", async ({ page }) => {
             json: { message: "Unauthenticated." },
         });
     });
-    await page.goto("/account");
+    await page.goto("/workspaces");
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect(page).toHaveURL("/login");
     await expect(page.getByRole("alert")).toHaveCount(0);

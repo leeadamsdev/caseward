@@ -11,7 +11,7 @@ import { PasswordHelp } from "~/components/forms/password-help";
 import { useFormFeedback } from "~/components/forms/use-form-feedback";
 import { ButtonLink } from "~/components/ui/button";
 import { Notice } from "~/components/ui/notice";
-import { AuthHeading } from "~/features/authentication/auth-shell";
+import { CardHeading } from "~/components/layout/card-page";
 import {
     resetFields,
     type ResetLink,
@@ -46,9 +46,9 @@ export function ResetPasswordForm({ link }: { link: ResetLink | undefined }) {
     return (
         <>
             {status === "reset" ? (
-                <div className="auth-result">
+                <div className="card-result">
                     <SuccessMark celebrate={false} />
-                    <AuthHeading
+                    <CardHeading
                         ref={headingRef}
                         title="Password reset"
                         description="Your password has been updated."
@@ -61,14 +61,14 @@ export function ResetPasswordForm({ link }: { link: ResetLink | undefined }) {
                     </Notice>
                 </div>
             ) : status === "invalid" ? (
-                <div className="auth-result">
+                <div className="card-result">
                     <div
                         className="mx-auto mt-7 flex size-18 items-center justify-center rounded-full bg-warning-surface text-warning"
                         aria-hidden="true"
                     >
                         <Unlink className="size-8" strokeWidth={1.7} />
                     </div>
-                    <AuthHeading
+                    <CardHeading
                         ref={headingRef}
                         title="This link is no longer valid"
                         description="It may have expired or already been used."
@@ -86,7 +86,7 @@ export function ResetPasswordForm({ link }: { link: ResetLink | undefined }) {
                 </div>
             ) : (
                 <>
-                    <AuthHeading
+                    <CardHeading
                         ref={headingRef}
                         title="Reset your password"
                         description="Choose a new password for your account."
@@ -125,7 +125,7 @@ export function ResetPasswordForm({ link }: { link: ResetLink | undefined }) {
                         ref={formRef}
                         method="post"
                         noValidate
-                        aria-labelledby="auth-title"
+                        aria-labelledby="page-title"
                         aria-busy={pending}
                         onSubmit={(event) => {
                             if (disabled) event.preventDefault();

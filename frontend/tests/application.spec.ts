@@ -350,7 +350,7 @@ test("keeps the same wave animations when loading hands over to the page", async
     expect(
         await wave.evaluate((element) => element.getAnimations()[0]?.startTime),
     ).toBe(initialStart);
-    const card = page.locator(".auth-card");
+    const card = page.locator(".card-page");
     let previousArrival = await card.evaluate(
         (element) => element.getAnimations()[0]?.startTime,
     );

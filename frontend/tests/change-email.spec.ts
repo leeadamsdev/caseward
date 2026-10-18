@@ -292,7 +292,7 @@ for (const state of [
         await page.goto(path);
         if (state === "guest" || state === "verified") {
             await expect(page).toHaveURL(
-                state === "guest" ? "/login?reason=session" : "/account",
+                state === "guest" ? "/login?reason=session" : "/workspaces/new",
             );
             return;
         }
@@ -313,7 +313,7 @@ for (const state of [
         });
         await page.getByRole("button", { name: saveLabel }).click();
         await expect(page).toHaveURL(
-            state === "expired" ? "/login?reason=session" : "/account",
+            state === "expired" ? "/login?reason=session" : "/workspaces/new",
         );
     });
 }

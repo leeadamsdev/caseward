@@ -1,14 +1,14 @@
 @media (prefers-reduced-motion: no-preference) {
-    .auth-card {
-        animation: auth-arrive 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    .card-page {
+        animation: card-arrive 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
-    .auth-result {
-        animation: auth-arrive 350ms ease-out both;
+    .card-result {
+        animation: card-arrive 350ms ease-out both;
     }
 }
 
-@keyframes auth-arrive {
+@keyframes card-arrive {
     from {
         opacity: 0;
         transform: translateY(0.75rem);

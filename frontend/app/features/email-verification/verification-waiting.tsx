@@ -9,7 +9,7 @@ import {
 } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Notice } from "~/components/ui/notice";
-import { AuthHeading } from "~/features/authentication/auth-shell";
+import { CardHeading } from "~/components/layout/card-page";
 import type { User } from "~/features/authentication/session";
 import { SignOutForm } from "~/features/authentication/sign-out-form";
 import { ResendVerificationForm } from "./resend-verification-form";
@@ -56,7 +56,7 @@ export function VerificationWaiting({ user }: { user: User }) {
             >
                 <Mail className="size-8" strokeWidth={1.7} />
             </div>
-            <AuthHeading
+            <CardHeading
                 ref={headingRef}
                 title={
                     deliveryFailed ? "Verify your email" : "Check your email"

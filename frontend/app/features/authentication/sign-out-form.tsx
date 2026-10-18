@@ -3,17 +3,22 @@ import { Form, useActionData, useNavigation } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Notice } from "~/components/ui/notice";
 import type { ApiFailure } from "~/lib/api";
+import { cn } from "~/lib/utils";
 
 export function SignOutForm({
     returnTo,
     label = "Sign out",
     variant = "ghost",
     disabled = false,
+    className,
+    buttonClassName,
 }: {
     returnTo?: string;
     label?: string;
     variant?: ComponentProps<typeof Button>["variant"];
     disabled?: boolean;
+    className?: string;
+    buttonClassName?: string;
 }) {
     const navigation = useNavigation();
     const result = useActionData<ApiFailure>();
@@ -27,7 +32,7 @@ export function SignOutForm({
     }, [pending, result]);
 
     return (
-        <div className="mt-6">
+        <div className={cn("mt-6", className)}>
             {!pending && result && (
                 <Notice
                     ref={noticeRef}
@@ -60,7 +65,7 @@ export function SignOutForm({
                     type="submit"
                     variant={variant}
                     disabled={pending || disabled}
-                    className="min-h-12 w-full px-4 py-3"
+                    className={cn("min-h-12 w-full px-4 py-3", buttonClassName)}
                 >
                     {pending ? "Signing out…" : label}
                 </Button>

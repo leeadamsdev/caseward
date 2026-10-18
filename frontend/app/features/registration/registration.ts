@@ -65,7 +65,7 @@ export async function registerAccount(
         return { status: "error", reason: "server" };
     return redirect(
         user.email_verified
-            ? "/account"
+            ? "/workspaces"
             : body.meta.verification_email_sent
               ? "/verify-email"
               : "/verify-email?delivery=failed",

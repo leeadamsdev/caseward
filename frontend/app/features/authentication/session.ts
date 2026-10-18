@@ -62,11 +62,11 @@ export async function guestLoader({ request }: { request: Request }) {
     );
     return redirect(
         returnTo ??
-            (session.status === "unverified" ? "/verify-email" : "/account"),
+            (session.status === "unverified" ? "/verify-email" : "/workspaces"),
     );
 }
 
-export async function accountLoader({ request }: { request: Request }) {
+export async function verifiedSessionLoader({ request }: { request: Request }) {
     const session = await loadSession(request);
     if (session.status === "guest") return redirect("/login?reason=session");
     if (session.status === "unverified") return redirect("/verify-email");

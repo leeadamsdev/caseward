@@ -12,6 +12,7 @@ export function FormField({
     placeholder,
     defaultValue,
     errors,
+    hint,
     labelAction,
     visibilityLabel = "password",
 }: {
@@ -22,12 +23,19 @@ export function FormField({
     placeholder: string;
     defaultValue?: string;
     errors: string[] | undefined;
+    hint?: string;
     labelAction?: ReactNode;
     visibilityLabel?: string | undefined;
 }) {
     const [visible, setVisible] = useState(false);
     const password = type === "password";
-    const description = errors ? `${name}-errors` : undefined;
+    const description =
+        [
+            hint ? `${name}-hint` : undefined,
+            errors ? `${name}-errors` : undefined,
+        ]
+            .filter(Boolean)
+            .join(" ") || undefined;
 
     return (
         <div>
@@ -72,6 +80,14 @@ export function FormField({
                     </Button>
                 )}
             </div>
+            {hint && (
+                <p
+                    id={`${name}-hint`}
+                    className="mt-2 text-xs leading-5 text-muted-foreground"
+                >
+                    {hint}
+                </p>
+            )}
             {errors && (
                 <FeedbackReveal>
                     <div

@@ -7,7 +7,7 @@ ARG APP_GID=1000
 
 RUN if ! getent group "$APP_GID" > /dev/null; then groupmod --gid "$APP_GID" node; fi \
     && usermod --uid "$APP_UID" --gid "$APP_GID" node \
-    && install -d -o node -g "$APP_GID" /var/www/app /var/www/app/node_modules
+    && install -d -o node -g "$APP_GID" /var/www/app /var/www/app/node_modules /var/www/app/.react-router
 
 COPY --chmod=755 entrypoint.sh /usr/local/bin/caseward-entrypoint
 

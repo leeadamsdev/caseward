@@ -5,10 +5,8 @@ import {
     SubmitButton,
     RateLimitNotice,
 } from "~/components/forms/form-feedback";
-import {
-    AuthHeading,
-    AuthNavigation,
-} from "~/features/authentication/auth-shell";
+import { AuthNavigation } from "~/features/authentication/auth-navigation";
+import { CardHeading } from "~/components/layout/card-page";
 import { Notice } from "~/components/ui/notice";
 import { registrationFields, type RegistrationResult } from "./registration";
 import { PasswordHelp } from "~/components/forms/password-help";
@@ -25,7 +23,7 @@ export function RegistrationForm() {
 
     return (
         <>
-            <AuthHeading
+            <CardHeading
                 title="Create account"
                 description="Get started with Caseward."
             />
@@ -62,7 +60,7 @@ export function RegistrationForm() {
                 ref={formRef}
                 method="post"
                 noValidate
-                aria-labelledby="auth-title"
+                aria-labelledby="page-title"
                 aria-busy={pending}
                 onSubmit={(event) => {
                     if (disabled) event.preventDefault();

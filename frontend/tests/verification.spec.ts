@@ -94,10 +94,10 @@ test("retains registration's restricted session and verifies only after delibera
         page.getByRole("heading", { name: "Email verified", exact: true }),
     ).toBeFocused();
     await checkAccessibility(page);
-    await page.getByRole("link", { name: "Continue to your account" }).click();
-    await expect(page).toHaveURL("/account");
+    await page.getByRole("link", { name: "Continue to workspaces" }).click();
+    await expect(page).toHaveURL("/workspaces/new");
     await expect(
-        page.getByText("Email verified", { exact: true }),
+        page.getByRole("heading", { name: "Create a workspace", exact: true }),
     ).toBeVisible();
     await page.goto(link);
     await expect(
@@ -117,7 +117,7 @@ test("routes unverified sign-ins and protected pages to verification", async ({
     await page.goto("/login");
     await signIn(page);
     await expect(page).toHaveURL("/verify-email");
-    for (const path of ["/account", "/register", "/login"]) {
+    for (const path of ["/workspaces", "/register", "/login"]) {
         await page.goto(path);
         await expect(page).toHaveURL("/verify-email");
         await expect(page.getByText(user.email, { exact: true })).toBeVisible();
@@ -130,7 +130,7 @@ test("routes unverified sign-ins and protected pages to verification", async ({
     ).toBeFocused();
     await mockSignedInSession(page, { ...user, email_verified: true });
     await page.getByRole("button", { name: "I’ve verified my email" }).click();
-    await expect(page).toHaveURL("/account");
+    await expect(page).toHaveURL("/workspaces/new");
 });
 
 test("preserves the signed link through sign-in after opening it while signed out", async ({
@@ -382,7 +382,7 @@ test("rejects unsafe return destinations and malformed verification state", asyn
             ),
     );
     await signIn(page);
-    await expect(page).toHaveURL("/account");
+    await expect(page).toHaveURL("/workspaces/new");
     await page.route("**/api/session", (route) =>
         route.fulfill({ json: { data: { ...user, email_verified: "true" } } }),
     );
@@ -429,7 +429,7 @@ test("rejects external and noncanonical return paths for existing sessions", asy
         await page.goto(
             "/login?" + new URLSearchParams({ returnTo }).toString(),
         );
-        await expect(page).toHaveURL("/account");
+        await expect(page).toHaveURL("/workspaces/new");
     }
     await page.goto("/email/verify/7/not-a-hash");
     await expect(

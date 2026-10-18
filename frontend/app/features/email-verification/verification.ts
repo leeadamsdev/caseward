@@ -68,7 +68,7 @@ export async function waitingAction({
 export async function waitingLoader({ request }: { request: Request }) {
     const session = await loadSession(request);
     if (session.status === "guest") return redirect("/login?reason=session");
-    if (session.status === "authenticated") return redirect("/account");
+    if (session.status === "authenticated") return redirect("/workspaces");
     return session;
 }
 

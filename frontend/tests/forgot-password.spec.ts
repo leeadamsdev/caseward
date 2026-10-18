@@ -261,9 +261,13 @@ for (const verified of [false, true]) {
         await page
             .getByRole("button", { name: "Send reset link", exact: true })
             .click();
-        await expect(page).toHaveURL(verified ? "/account" : "/verify-email");
+        await expect(page).toHaveURL(
+            verified ? "/workspaces/new" : "/verify-email",
+        );
         await page.goto(path);
-        await expect(page).toHaveURL(verified ? "/account" : "/verify-email");
+        await expect(page).toHaveURL(
+            verified ? "/workspaces/new" : "/verify-email",
+        );
     });
 }
 

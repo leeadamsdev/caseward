@@ -9,7 +9,7 @@ import {
 import { useFormFeedback } from "~/components/forms/use-form-feedback";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { Notice } from "~/components/ui/notice";
-import { AuthHeading } from "~/features/authentication/auth-shell";
+import { CardHeading } from "~/components/layout/card-page";
 import { recoveryFields, type RecoveryRequestResult } from "./forgot-password";
 
 export function ForgotPasswordForm() {
@@ -31,14 +31,14 @@ export function ForgotPasswordForm() {
     return (
         <>
             {accepted ? (
-                <div className="auth-result">
+                <div className="card-result">
                     <div
                         className="mx-auto mt-7 flex size-18 items-center justify-center rounded-full bg-accent text-primary"
                         aria-hidden="true"
                     >
                         <Mail className="size-8" strokeWidth={1.7} />
                     </div>
-                    <AuthHeading
+                    <CardHeading
                         ref={headingRef}
                         title="Check your inbox"
                         description="Look for a password reset link."
@@ -69,7 +69,7 @@ export function ForgotPasswordForm() {
                 </div>
             ) : (
                 <>
-                    <AuthHeading
+                    <CardHeading
                         ref={headingRef}
                         title="Forgot your password?"
                         description="We’ll help you get back into Caseward."
@@ -110,7 +110,7 @@ export function ForgotPasswordForm() {
                         ref={formRef}
                         method="post"
                         noValidate
-                        aria-labelledby="auth-title"
+                        aria-labelledby="page-title"
                         aria-busy={pending}
                         onSubmit={(event) => {
                             if (disabled) event.preventDefault();

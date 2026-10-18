@@ -8,7 +8,7 @@ import {
 import { useFormFeedback } from "~/components/forms/use-form-feedback";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { Notice } from "~/components/ui/notice";
-import { AuthHeading } from "~/features/authentication/auth-shell";
+import { CardHeading } from "~/components/layout/card-page";
 import type { User } from "~/features/authentication/session";
 import { emailFields, type ChangeEmailResult } from "./change-email";
 
@@ -30,7 +30,7 @@ export function ChangeEmailForm({ user }: { user: User }) {
 
     return (
         <>
-            <AuthHeading
+            <CardHeading
                 ref={headingRef}
                 title="Change email address"
                 description="Let’s get your verification email to the right inbox."
@@ -78,7 +78,7 @@ export function ChangeEmailForm({ user }: { user: User }) {
                 ref={formRef}
                 method="post"
                 noValidate
-                aria-labelledby="auth-title"
+                aria-labelledby="page-title"
                 aria-busy={pending}
                 onSubmit={(event) => {
                     if (disabled) event.preventDefault();

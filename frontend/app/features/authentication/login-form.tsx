@@ -8,7 +8,8 @@ import { useFormFeedback } from "~/components/forms/use-form-feedback";
 import { ButtonLink } from "~/components/ui/button";
 import { Notice } from "~/components/ui/notice";
 import { verificationPath } from "~/features/email-verification/links";
-import { AuthHeading, AuthNavigation } from "./auth-shell";
+import { AuthNavigation } from "~/features/authentication/auth-navigation";
+import { CardHeading } from "~/components/layout/card-page";
 import { loginFields, type LoginResult } from "./login";
 
 export function LoginForm() {
@@ -25,7 +26,7 @@ export function LoginForm() {
 
     return (
         <>
-            <AuthHeading
+            <CardHeading
                 title="Sign in"
                 description="Welcome back to Caseward."
             />
@@ -82,7 +83,7 @@ export function LoginForm() {
                 ref={formRef}
                 method="post"
                 noValidate
-                aria-labelledby="auth-title"
+                aria-labelledby="page-title"
                 aria-busy={pending}
                 onSubmit={(event) => {
                     if (disabled) event.preventDefault();

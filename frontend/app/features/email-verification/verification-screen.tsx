@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { useFetcher, useNavigation, useRevalidator } from "react-router";
 import { SuccessMark } from "~/components/feedback/success-mark";
 import { ButtonLink } from "~/components/ui/button";
-import { AuthHeading } from "~/features/authentication/auth-shell";
+import { CardHeading } from "~/components/layout/card-page";
 import { SignOutForm } from "~/features/authentication/sign-out-form";
 import type { VerificationResult } from "~/features/email-verification/verification";
 import type { User } from "~/features/authentication/session";
@@ -68,7 +68,7 @@ export function VerificationScreen({
     const Icon = recovery?.icon ?? ShieldCheck;
 
     return (
-        <div key={status} className="auth-result">
+        <div key={status} className="card-result">
             {status === "verified" ? (
                 <SuccessMark celebrate={result?.status === "verified"} />
             ) : (
@@ -79,7 +79,7 @@ export function VerificationScreen({
                     <Icon className="size-8" strokeWidth={1.7} />
                 </div>
             )}
-            <AuthHeading
+            <CardHeading
                 ref={headingRef}
                 title={title}
                 description={
@@ -100,8 +100,8 @@ export function VerificationScreen({
                 </strong>
             </p>
             {status === "verified" ? (
-                <ButtonLink to="/account" className="mt-7 w-full">
-                    Continue to your account
+                <ButtonLink to="/workspaces" className="mt-7 w-full">
+                    Continue to workspaces
                 </ButtonLink>
             ) : status === "confirm" ? (
                 <VerificationForm fetcher={fetcher} path={path} />
@@ -126,7 +126,11 @@ export function VerificationScreen({
                         />
                     )}
                     <ButtonLink
-                        to={user.email_verified ? "/account" : "/verify-email"}
+                        to={
+                            user.email_verified
+                                ? "/workspaces"
+                                : "/verify-email"
+                        }
                         variant={
                             status === "account-mismatch" ||
                             (status === "invalid" && !user.email_verified)
@@ -136,7 +140,7 @@ export function VerificationScreen({
                         className="mt-5 w-full"
                     >
                         {user.email_verified
-                            ? "Back to your account"
+                            ? "Back to workspaces"
                             : "Back to verification"}
                     </ButtonLink>
                     {status !== "account-mismatch" && (

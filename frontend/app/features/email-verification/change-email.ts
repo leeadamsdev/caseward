@@ -52,7 +52,7 @@ export async function changeEmail({
         isRecord(body) &&
         body.code === "email_already_verified"
     )
-        return redirect("/account");
+        return redirect("/workspaces");
     if (response.status !== 200) return { status: "error", reason: "server" };
     const user = parseUser(body);
     if (
@@ -64,7 +64,7 @@ export async function changeEmail({
         return { status: "error", reason: "server" };
     return redirect(
         user.email_verified
-            ? "/account"
+            ? "/workspaces"
             : body.meta.verification_email_sent
               ? "/verify-email?updated=1"
               : "/verify-email?updated=1&delivery=failed",

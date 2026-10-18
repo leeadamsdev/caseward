@@ -11,6 +11,9 @@ class CreateWorkspaceRequest extends FormRequest
     /** @return array<string, list<string>> */
     public function rules(): array
     {
-        return ['name' => ['bail', 'required', 'string', 'max:100', 'not_regex:/\p{Cc}/u']];
+        return [
+            'account_id' => ['required', 'integer', 'min:1'],
+            'name' => ['bail', 'required', 'string', 'max:100', 'not_regex:/\p{Cc}/u'],
+        ];
     }
 }

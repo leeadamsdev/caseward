@@ -1,14 +1,14 @@
 import { useRevalidator } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Notice } from "~/components/ui/notice";
-import { AuthHeading } from "./auth-shell";
+import { CardHeading } from "~/components/layout/card-page";
 
 export function SessionError() {
     const revalidator = useRevalidator();
     const pending = revalidator.state !== "idle";
     return (
         <>
-            <AuthHeading
+            <CardHeading
                 title="Connection problem"
                 description="We couldn’t check your session."
             />

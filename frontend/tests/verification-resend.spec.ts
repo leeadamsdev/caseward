@@ -342,9 +342,9 @@ test("observes the server limit after reload and stops at verified account acces
     ).toBeDisabled();
     await mockSignedInSession(page, { ...user, email_verified: true });
     await page.getByRole("button", { name: "I’ve verified my email" }).click();
-    await expect(page).toHaveURL("/account");
+    await expect(page).toHaveURL("/workspaces/new");
     await expect(
-        page.getByText("Email verified", { exact: true }),
+        page.getByRole("heading", { name: "Create a workspace", exact: true }),
     ).toBeVisible();
 });
 

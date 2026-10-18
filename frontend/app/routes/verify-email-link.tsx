@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { ButtonLink } from "~/components/ui/button";
-import { AuthHeading, AuthShell } from "~/features/authentication/auth-shell";
+import { CardHeading, CardPage } from "~/components/layout/card-page";
 import { SessionError } from "~/features/authentication/session-error";
 import { VerificationScreen } from "~/features/email-verification/verification-screen";
 import {
@@ -23,12 +23,12 @@ export default function VerifyEmailLink({
         headingRef.current?.focus({ preventScroll: true });
     }, [loaderData.status]);
     return (
-        <AuthShell>
+        <CardPage>
             {loaderData.status === "error" ? (
                 <SessionError />
             ) : loaderData.status === "invalid" ? (
                 <>
-                    <AuthHeading
+                    <CardHeading
                         ref={headingRef}
                         title="Link expired or invalid"
                         description="This verification link can no longer be used."
@@ -45,6 +45,6 @@ export default function VerifyEmailLink({
                     accountId={params.id}
                 />
             )}
-        </AuthShell>
+        </CardPage>
     );
 }

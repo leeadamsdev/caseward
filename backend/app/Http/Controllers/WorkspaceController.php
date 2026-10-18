@@ -26,6 +26,12 @@ class WorkspaceController
     public function store(CreateWorkspaceRequest $request): JsonResponse
     {
         $user = $this->user($request);
+        if ($request->integer('account_id') !== $user->id) {
+            abort(response()->json([
+                'message' => 'The signed-in account changed. Reopen the form before trying again.',
+                'code' => 'account_context_changed',
+            ], 409));
+        }
         $workspace = DB::transaction(function () use ($request, $user): Workspace {
             $workspace = $user->workspaces()->create(
                 ['name' => $request->string('name')->toString()],

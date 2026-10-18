@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -26,6 +27,16 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $fillable = ['name', 'email', 'password'];
 
     protected $hidden = ['password'];
+
+    /** @return BelongsToMany<Workspace, $this, WorkspaceMembership, 'membership'> */
+    public function workspaces(): BelongsToMany
+    {
+        return $this->belongsToMany(Workspace::class, 'workspace_memberships')
+            ->using(WorkspaceMembership::class)
+            ->as('membership')
+            ->withPivot('role')
+            ->withTimestamps();
+    }
 
     protected function casts(): array
     {

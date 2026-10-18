@@ -1,4 +1,5 @@
 import { redirect } from "react-router";
+import { emailField } from "~/components/forms/email-field";
 import { verificationPath } from "~/features/email-verification/links";
 import {
     rateLimit,
@@ -11,11 +12,8 @@ import {
 
 export const loginFields = [
     {
-        name: "email",
-        label: "Email address",
-        type: "email",
+        ...emailField,
         autoComplete: "username",
-        placeholder: "you@company.com",
     },
     {
         name: "password",

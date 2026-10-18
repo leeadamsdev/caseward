@@ -1,4 +1,6 @@
 import { redirect } from "react-router";
+import { emailField } from "~/components/forms/email-field";
+import { newPasswordFields } from "~/components/forms/new-password-fields";
 import {
     isRecord,
     rateLimit,
@@ -18,27 +20,8 @@ export const registrationFields = [
         autoComplete: "name",
         placeholder: "e.g. Alex Chen",
     },
-    {
-        name: "email",
-        label: "Email address",
-        type: "email",
-        autoComplete: "email",
-        placeholder: "you@company.com",
-    },
-    {
-        name: "password",
-        label: "Password",
-        type: "password",
-        autoComplete: "new-password",
-        placeholder: "Create a password",
-    },
-    {
-        name: "password_confirmation",
-        label: "Confirm password",
-        type: "password",
-        autoComplete: "new-password",
-        placeholder: "Re-enter your password",
-    },
+    emailField,
+    ...newPasswordFields,
 ] as const;
 
 export type RegistrationFieldName = (typeof registrationFields)[number]["name"];

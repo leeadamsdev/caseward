@@ -10,6 +10,8 @@ export default [
     layout("routes/guest.tsx", [
         route("register", "routes/register.tsx"),
         route("login", "routes/login.tsx"),
+        route("forgot-password", "routes/forgot-password.tsx"),
+        route("reset-password/:token?", "routes/reset-password.tsx"),
     ]),
     route("account", "routes/account.tsx"),
     route("verify-email", "routes/verify-email.tsx"),

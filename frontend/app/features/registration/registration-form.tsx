@@ -11,7 +11,7 @@ import {
 } from "~/features/authentication/auth-shell";
 import { Notice } from "~/components/ui/notice";
 import { registrationFields, type RegistrationResult } from "./registration";
-import { PasswordHelp } from "./password-help";
+import { PasswordHelp } from "~/components/forms/password-help";
 
 export function RegistrationForm() {
     const fetcher = useFetcher<RegistrationResult>();

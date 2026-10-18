@@ -5,6 +5,7 @@ import {
     SubmitButton,
 } from "~/components/forms/form-feedback";
 import { useFormFeedback } from "~/components/forms/use-form-feedback";
+import { ButtonLink } from "~/components/ui/button";
 import { Notice } from "~/components/ui/notice";
 import { verificationPath } from "~/features/email-verification/links";
 import { AuthHeading, AuthNavigation } from "./auth-shell";
@@ -96,6 +97,15 @@ export function LoginForm() {
                             errors={errors[field.name]}
                         />
                     ))}
+                    <div className="text-right">
+                        <ButtonLink
+                            to="/forgot-password"
+                            variant="ghost"
+                            className="px-1 py-2 text-sm underline underline-offset-4"
+                        >
+                            Forgot password?
+                        </ButtonLink>
+                    </div>
                     <SubmitButton
                         pending={pending}
                         label="Sign in"

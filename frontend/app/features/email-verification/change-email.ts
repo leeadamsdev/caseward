@@ -1,4 +1,5 @@
 import { redirect } from "react-router";
+import { emailField } from "~/components/forms/email-field";
 import { parseUser } from "~/features/authentication/session";
 import {
     isRecord,
@@ -10,15 +11,7 @@ import {
     type FormFailure,
 } from "~/lib/api";
 
-export const emailFields = [
-    {
-        name: "email",
-        label: "Email address",
-        type: "email",
-        autoComplete: "email",
-        placeholder: "you@company.com",
-    },
-] as const;
+export const emailFields = [emailField] as const;
 
 export type ChangeEmailResult = FormFailure<"email">;
 

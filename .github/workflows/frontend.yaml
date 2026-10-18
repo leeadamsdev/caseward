@@ -34,7 +34,10 @@ jobs:
         run: npm install --global "$(node -p 'require("./package.json").packageManager')" --allow-scripts=pnpm --no-fund
 
       - name: Install locked dependencies
-        run: pnpm install --frozen-lockfile --prefer-offline --store-dir "$CI_CACHE_DIR/pnpm" --cache-dir "$CI_CACHE_DIR/pnpm-metadata"
+        run: pnpm install --frozen-lockfile --prefer-offline
+        env:
+          pnpm_config_store_dir: ${{ env.CI_CACHE_DIR }}/pnpm
+          pnpm_config_cache_dir: ${{ env.CI_CACHE_DIR }}/pnpm-metadata
 
       - name: Check formatting, types, lint and unit tests
         run: pnpm run check:static

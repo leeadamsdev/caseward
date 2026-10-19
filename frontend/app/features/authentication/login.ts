@@ -1,7 +1,7 @@
 import { redirect } from "react-router";
 import type { LoginRequest } from "~/generated/api/operations.schemas";
 import { emailField } from "~/components/forms/email-field";
-import { verificationPath } from "~/features/email-verification/links";
+import { authReturnTo } from "./return-to";
 import {
     rateLimit,
     requiredFields,
@@ -43,9 +43,8 @@ export async function signIn(
     if (!(response instanceof Response)) return response;
     if (response.status === 204)
         return redirect(
-            verificationPath(
-                new URL(request.url).searchParams.get("returnTo"),
-            ) ?? "/workspaces",
+            authReturnTo(new URL(request.url).searchParams.get("returnTo")) ??
+                "/workspaces",
         );
     if (response.status === 429) return rateLimit(response);
     if (response.status === 419) return { status: "error", reason: "expired" };

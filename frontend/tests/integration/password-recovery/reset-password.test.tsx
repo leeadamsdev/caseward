@@ -68,7 +68,7 @@ test("requires both passwords and rejects mismatched confirmation locally before
     expect(confirmation).toHaveAccessibleDescription(
         "Confirm new password is required.",
     );
-    expect(password).toHaveFocus();
+    await waitFor(() => expect(password).toHaveFocus());
 
     await user.type(password, newPassword);
     await user.type(confirmation, "a different passphrase");
@@ -78,7 +78,7 @@ test("requires both passwords and rejects mismatched confirmation locally before
             "Passwords do not match.",
         ),
     );
-    expect(confirmation).toHaveFocus();
+    await waitFor(() => expect(confirmation).toHaveFocus());
     expect(request).not.toHaveBeenCalled();
 
     await user.clear(password);
@@ -91,7 +91,7 @@ test("requires both passwords and rejects mismatched confirmation locally before
             "The password must be at least 15 characters.",
         ),
     );
-    expect(password).toHaveFocus();
+    await waitFor(() => expect(password).toHaveFocus());
     expect(password).toHaveValue("short");
     expect(confirmation).toHaveValue("short");
     expect(request).toHaveBeenCalledTimes(1);

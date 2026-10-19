@@ -6,6 +6,7 @@ import { SessionError } from "~/features/authentication/session-error";
 import { WorkspaceFooter } from "~/features/workspaces/workspace-footer";
 import { WorkspaceLoadError } from "~/features/workspaces/workspace-load-error";
 import { workspaceLoader } from "~/features/workspaces/workspaces";
+import { membersPath } from "~/features/workspaces/members";
 import type { Route } from "./+types/workspace";
 
 export const clientLoader = workspaceLoader;
@@ -52,6 +53,12 @@ export default function Workspace({ loaderData }: Route.ComponentProps) {
                                         : "Member"}
                                 </dd>
                             </dl>
+                            <ButtonLink
+                                to={membersPath(loaderData.result.workspace.id)}
+                                className="mt-6 w-full"
+                            >
+                                View members
+                            </ButtonLink>
                         </>
                     ) : loaderData.result.status === "missing" ? (
                         <CardHeading

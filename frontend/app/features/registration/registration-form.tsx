@@ -1,4 +1,8 @@
-import { useFetcher } from "react-router";
+import { useFetcher, useSearchParams } from "react-router";
+import {
+    authReturnTo,
+    withReturnTo,
+} from "~/features/authentication/return-to";
 import { FormField } from "~/components/forms/form-field";
 import { useFormFeedback } from "~/components/forms/use-form-feedback";
 import {
@@ -13,6 +17,8 @@ import { PasswordHelp } from "~/components/forms/password-help";
 
 export function RegistrationForm() {
     const fetcher = useFetcher<RegistrationResult>();
+    const [params] = useSearchParams();
+    const returnTo = authReturnTo(params.get("returnTo"));
     const result = fetcher.data;
     const pending = fetcher.state !== "idle";
     const { formRef, noticeRef, remaining, errors, disabled } = useFormFeedback(
@@ -94,7 +100,7 @@ export function RegistrationForm() {
             </fetcher.Form>
             <AuthNavigation
                 prompt="Already have an account?"
-                to="/login"
+                to={withReturnTo("/login", returnTo)}
                 label="Sign in"
             />
         </>

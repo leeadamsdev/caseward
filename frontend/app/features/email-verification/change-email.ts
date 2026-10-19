@@ -15,6 +15,10 @@ import {
     validationErrors,
     type FormFailure,
 } from "~/lib/api";
+import {
+    authReturnTo,
+    withReturnTo,
+} from "~/features/authentication/return-to";
 
 export const emailFields = [emailField] as const;
 const correctionSchema = UpdateUnverifiedEmail200Response.extend({
@@ -29,6 +33,9 @@ export async function changeEmail({
     request: Request;
 }): Promise<ChangeEmailResult | Response> {
     const data = await request.formData();
+    const returnTo = authReturnTo(
+        new URL(request.url).searchParams.get("returnTo"),
+    );
     const { values, errors } = requiredFields(data, emailFields);
     if (Object.keys(errors).length > 0) return { status: "validation", errors };
     const accountId = data.get("account_id");
@@ -46,7 +53,8 @@ export async function changeEmail({
         } satisfies UpdateEmailRequest,
     });
     if (!(response instanceof Response)) return response;
-    if (response.status === 401) return redirect("/login?reason=session");
+    if (response.status === 401)
+        return redirect(withReturnTo("/login?reason=session", returnTo));
     if (response.status === 419) return { status: "error", reason: "expired" };
     if (response.status === 429) return rateLimit(response);
     const body = await responseBody(response);
@@ -55,7 +63,9 @@ export async function changeEmail({
         UpdateUnverifiedEmail409Response.pick({ code: true }).safeParse(body)
             .success
     )
-        return redirect("/verify-email?account=changed");
+        return redirect(
+            withReturnTo("/verify-email?account=changed", returnTo),
+        );
     if (response.status === 422) {
         const errors = validationErrors(body, emailFields);
         return errors
@@ -67,16 +77,19 @@ export async function changeEmail({
         UpdateUnverifiedEmail403Response.pick({ code: true }).safeParse(body)
             .success
     )
-        return redirect("/workspaces");
+        return redirect(returnTo ?? "/workspaces");
     if (response.status !== 200) return { status: "error", reason: "server" };
     const parsed = correctionSchema.safeParse(body);
     if (!parsed.success) return { status: "error", reason: "server" };
     const { data: user, meta } = parsed.data;
     return redirect(
         user.email_verified
-            ? "/workspaces"
-            : meta.verification_email_queued
-              ? "/verify-email?updated=1"
-              : "/verify-email?updated=1&queue=failed",
+            ? (returnTo ?? "/workspaces")
+            : withReturnTo(
+                  meta.verification_email_queued
+                      ? "/verify-email?updated=1"
+                      : "/verify-email?updated=1&queue=failed",
+                  returnTo,
+              ),
     );
 }

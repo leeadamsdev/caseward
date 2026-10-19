@@ -74,9 +74,10 @@ test("sends the address with CSRF protection and can reset confirmation without 
     );
     await user.click(screen.getByRole("button", { name: "Send reset link" }));
 
-    expect(
-        await screen.findByRole("heading", { name: "Check your inbox" }),
-    ).toHaveFocus();
+    const heading = await screen.findByRole("heading", {
+        name: "Check your inbox",
+    });
+    await waitFor(() => expect(heading).toHaveFocus());
     expect(screen.getByText(/If an account matches/)).toHaveTextContent(
         `If an account matches ${email}, we’ll send a password reset link.`,
     );

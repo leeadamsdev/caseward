@@ -10,6 +10,7 @@ import type { UserResource as User } from "~/generated/api/operations.schemas";
 import { ResendVerificationForm } from "./resend-verification-form";
 import { VerificationForm } from "./verification-form";
 import type { ResendResult } from "./verification";
+import { withReturnTo } from "~/features/authentication/return-to";
 
 const recoveryScreens = {
     invalid: {
@@ -36,10 +37,12 @@ export function VerificationScreen({
     user,
     path,
     accountId,
+    continuation,
 }: {
     user: User;
     path: string;
     accountId: string;
+    continuation?: string | undefined;
 }) {
     const fetcher = useFetcher<VerificationResult>();
     const resend = useFetcher<ResendResult>();
@@ -100,8 +103,13 @@ export function VerificationScreen({
                 </strong>
             </p>
             {status === "verified" ? (
-                <ButtonLink to="/workspaces" className="mt-7 w-full">
-                    Continue to workspaces
+                <ButtonLink
+                    to={continuation ?? "/workspaces"}
+                    className="mt-7 w-full"
+                >
+                    {continuation
+                        ? "Continue to invitation"
+                        : "Continue to workspaces"}
                 </ButtonLink>
             ) : status === "confirm" ? (
                 <VerificationForm fetcher={fetcher} path={path} />
@@ -128,8 +136,8 @@ export function VerificationScreen({
                     <ButtonLink
                         to={
                             user.email_verified
-                                ? "/workspaces"
-                                : "/verify-email"
+                                ? (continuation ?? "/workspaces")
+                                : withReturnTo("/verify-email", continuation)
                         }
                         variant={
                             status === "account-mismatch" ||
@@ -140,7 +148,9 @@ export function VerificationScreen({
                         className="mt-5 w-full"
                     >
                         {user.email_verified
-                            ? "Back to workspaces"
+                            ? continuation
+                                ? "Back to invitation"
+                                : "Back to workspaces"
                             : "Back to verification"}
                     </ButtonLink>
                     {status !== "account-mismatch" && (

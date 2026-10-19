@@ -43,6 +43,7 @@ export default function VerifyEmailLink({
                     user={loaderData.user}
                     path={loaderData.path}
                     accountId={params.id}
+                    continuation={loaderData.continuation}
                 />
             )}
         </CardPage>

@@ -20,6 +20,7 @@ afterEach(() => {
     server.resetHandlers();
     vi.useRealTimers();
     document.cookie = "XSRF-TOKEN=; Max-Age=0; Path=/";
+    localStorage.clear();
     // The application catches network errors; an unhandled mock must still fail the test.
     expect(unexpectedRequests.splice(0)).toEqual([]);
 });

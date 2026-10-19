@@ -1,8 +1,6 @@
 import { expect, test } from "vitest";
-import {
-    verificationPath,
-    verificationSignIn,
-} from "~/features/email-verification/links";
+import { verificationPath } from "~/features/email-verification/links";
+import { withReturnTo } from "~/features/authentication/return-to";
 
 const path = `/email/verify/7/${"a".repeat(40)}?expires=123&signature=abc`;
 
@@ -10,11 +8,11 @@ test("verification sign-in preserves only the expected local verification destin
     expect(verificationPath(path)).toBe(path);
     expect(
         new URL(
-            verificationSignIn(path),
+            withReturnTo("/login", path),
             "https://caseward.test",
         ).searchParams.get("returnTo"),
     ).toBe(path);
-    expect(verificationSignIn(undefined)).toBe("/login");
+    expect(withReturnTo("/login", undefined)).toBe("/login");
 });
 
 test.each([

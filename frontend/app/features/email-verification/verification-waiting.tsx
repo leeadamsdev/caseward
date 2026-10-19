@@ -14,6 +14,10 @@ import type { UserResource as User } from "~/generated/api/operations.schemas";
 import { SignOutForm } from "~/features/authentication/sign-out-form";
 import { ResendVerificationForm } from "./resend-verification-form";
 import type { ResendResult } from "./verification";
+import {
+    authReturnTo,
+    withReturnTo,
+} from "~/features/authentication/return-to";
 
 export function VerificationWaiting({ user }: { user: User }) {
     const navigate = useNavigate();
@@ -22,6 +26,7 @@ export function VerificationWaiting({ user }: { user: User }) {
     const resend = useFetcher<ResendResult>();
     const resending = resend.state !== "idle";
     const [params, setParams] = useSearchParams();
+    const returnTo = authReturnTo(params.get("returnTo"));
     const [checked, setChecked] = useState(false);
     const headingRef = useRef<HTMLHeadingElement>(null);
     const noticeRef = useRef<HTMLDivElement>(null);
@@ -127,6 +132,7 @@ export function VerificationWaiting({ user }: { user: User }) {
             )}
             <ResendVerificationForm
                 fetcher={resend}
+                {...(returnTo ? { returnTo } : {})}
                 disabled={pending || navigation.state !== "idle"}
                 variant={queueFailed ? "primary" : "outline"}
             >
@@ -154,12 +160,17 @@ export function VerificationWaiting({ user }: { user: User }) {
                 className="mt-4 min-h-12 w-full px-4 py-3"
                 disabled={pending || resending || navigation.state !== "idle"}
                 onClick={() => {
-                    void navigate("/verify-email/change");
+                    void navigate(
+                        withReturnTo("/verify-email/change", returnTo),
+                    );
                 }}
             >
                 Change email address
             </Button>
-            <SignOutForm disabled={pending || resending} />
+            <SignOutForm
+                disabled={pending || resending}
+                {...(returnTo ? { returnTo } : {})}
+            />
         </>
     );
 }

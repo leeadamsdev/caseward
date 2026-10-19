@@ -1,5 +1,9 @@
 import { useEffect, useRef } from "react";
-import { useFetcher, useNavigate } from "react-router";
+import { useFetcher, useNavigate, useSearchParams } from "react-router";
+import {
+    authReturnTo,
+    withReturnTo,
+} from "~/features/authentication/return-to";
 import { FormField } from "~/components/forms/form-field";
 import {
     RateLimitNotice,
@@ -15,6 +19,8 @@ import { emailFields, type ChangeEmailResult } from "./change-email";
 export function ChangeEmailForm({ user }: { user: User }) {
     const fetcher = useFetcher<ChangeEmailResult>();
     const navigate = useNavigate();
+    const [params] = useSearchParams();
+    const returnTo = authReturnTo(params.get("returnTo"));
     const result = fetcher.data;
     const pending = fetcher.state !== "idle";
     const headingRef = useRef<HTMLHeadingElement>(null);
@@ -63,7 +69,7 @@ export function ChangeEmailForm({ user }: { user: User }) {
                             : "Your request may have reached us. Check your connection and the saved address before trying again."}
                     </p>
                     <ButtonLink
-                        to="/verify-email"
+                        to={withReturnTo("/verify-email", returnTo)}
                         variant="ghost"
                         className="mt-2 px-2 py-1 underline"
                     >
@@ -104,7 +110,7 @@ export function ChangeEmailForm({ user }: { user: User }) {
                 className="mt-3 w-full"
                 disabled={pending}
                 onClick={() => {
-                    void navigate("/verify-email");
+                    void navigate(withReturnTo("/verify-email", returnTo));
                 }}
             >
                 Cancel

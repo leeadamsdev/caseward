@@ -1,5 +1,6 @@
 import { redirect } from "react-router";
 import { z } from "zod";
+import { validPage } from "~/lib/pagination";
 import {
     WorkspaceResource,
     type WorkspaceResource as Workspace,
@@ -51,19 +52,7 @@ const creationSchema = CreateWorkspace201Response.extend({
 });
 const pageSchema = ListWorkspaces200Response.extend({
     data: z.array(workspaceSchema),
-}).refine(
-    ({ data, meta }) =>
-        meta.per_page > 0 &&
-        data.length <= meta.per_page &&
-        data.length <= meta.total &&
-        new Set(data.map((workspace) => workspace.id)).size === data.length &&
-        meta.last_page === Math.max(1, Math.ceil(meta.total / meta.per_page)) &&
-        !(
-            data.length === 0 &&
-            meta.total > 0 &&
-            meta.current_page <= meta.last_page
-        ),
-);
+}).refine(validPage);
 
 export const workspaceFields = [
     {
@@ -88,7 +77,7 @@ export function workspacePagePath(page: number) {
     return page === 1 ? "/workspaces" : `/workspaces?page=${String(page)}`;
 }
 
-function accessRedirect(response: Response, body: unknown) {
+export function workspaceAccessRedirect(response: Response, body: unknown) {
     if (response.status === 401) return redirect("/login?reason=session");
     if (
         response.status === 403 &&
@@ -107,7 +96,7 @@ async function loadWorkspacePage(
     );
     if (!(response instanceof Response)) return response;
     const body = await responseBody(response);
-    const redirected = accessRedirect(response, body);
+    const redirected = workspaceAccessRedirect(response, body);
     if (redirected) return redirected;
     const parsed = pageSchema.safeParse(body);
     return response.status === 200 &&
@@ -176,7 +165,7 @@ export async function workspaceLoader({
         if (!(response instanceof Response)) result = response;
         else {
             const body = await responseBody(response);
-            const redirected = accessRedirect(response, body);
+            const redirected = workspaceAccessRedirect(response, body);
             if (redirected) return redirected;
             const parsed = workspaceResponseSchema.safeParse(body);
             const workspace = parsed.success ? parsed.data.data : undefined;
@@ -221,7 +210,7 @@ export async function createWorkspace({
     if (response.status === 419) return { status: "error", reason: "expired" };
     if (response.status === 429) return rateLimit(response);
     const body = await responseBody(response);
-    const redirected = accessRedirect(response, body);
+    const redirected = workspaceAccessRedirect(response, body);
     if (redirected) return redirected;
     if (
         response.status === 409 &&

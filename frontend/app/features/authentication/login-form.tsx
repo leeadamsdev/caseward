@@ -7,7 +7,8 @@ import {
 import { useFormFeedback } from "~/components/forms/use-form-feedback";
 import { ButtonLink } from "~/components/ui/button";
 import { Notice } from "~/components/ui/notice";
-import { verificationPath } from "~/features/email-verification/links";
+import { authReturnTo, withReturnTo } from "./return-to";
+import { invitationPath } from "~/features/workspace-invitations/links";
 import { AuthNavigation } from "~/features/authentication/auth-navigation";
 import { CardHeading } from "~/components/layout/card-page";
 import { loginFields, type LoginResult } from "./login";
@@ -15,7 +16,7 @@ import { loginFields, type LoginResult } from "./login";
 export function LoginForm() {
     const fetcher = useFetcher<LoginResult>();
     const [params] = useSearchParams();
-    const returnTo = verificationPath(params.get("returnTo"));
+    const returnTo = authReturnTo(params.get("returnTo"));
     const pending = fetcher.state !== "idle";
     const result = fetcher.data;
     const { formRef, noticeRef, remaining, errors, disabled } = useFormFeedback(
@@ -37,7 +38,9 @@ export function LoginForm() {
                 <Notice className="mb-5">
                     <p>
                         Sign in to the account this link was sent to. We’ll
-                        bring you back to verify your email.
+                        {invitationPath(returnTo)
+                            ? "bring you back to review your invitation."
+                            : "bring you back to verify your email."}
                     </p>
                 </Notice>
             )}
@@ -116,7 +119,7 @@ export function LoginForm() {
                             </span>
                         </label>
                         <ButtonLink
-                            to="/forgot-password"
+                            to={withReturnTo("/forgot-password", returnTo)}
                             variant="ghost"
                             className="ml-auto max-w-full px-1 py-2 text-sm underline underline-offset-4"
                         >
@@ -132,7 +135,7 @@ export function LoginForm() {
             </fetcher.Form>
             <AuthNavigation
                 prompt="New to Caseward?"
-                to="/register"
+                to={withReturnTo("/register", returnTo)}
                 label="Create an account"
             />
         </>

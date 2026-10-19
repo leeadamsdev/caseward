@@ -7,7 +7,3 @@ export function verificationPath(value: string | null): string | undefined {
     const url = new URL(value, "https://caseward.invalid");
     if (value === url.pathname + url.search) return value;
 }
-
-export function verificationSignIn(returnTo: string | undefined) {
-    return returnTo ? `/login?${new URLSearchParams({ returnTo })}` : "/login";
-}

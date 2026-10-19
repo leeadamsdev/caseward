@@ -231,6 +231,46 @@ test("registers, verifies, recovers a password and creates a workspace through M
             }),
         ).toBeVisible();
         const workspaceUrl = page.url();
+        await page.getByRole("link", { name: "View members" }).click();
+        await expect(
+            page.getByRole("heading", { name: "Workspace members" }),
+        ).toBeVisible();
+        const invitee = `invitation-${randomUUID()}@caseward.test`;
+        await page.getByRole("button", { name: "Invite colleague" }).click();
+        await page
+            .getByRole("textbox", { name: "Email address" })
+            .fill(invitee);
+        await page.getByRole("button", { name: "Send invitation" }).click();
+        await expect(
+            page.getByText("Invitation queued", { exact: true }),
+        ).toBeVisible();
+        await page.getByRole("button", { name: "Done", exact: true }).click();
+        const invitationMail = await capturedMail(request, `to:${invitee}`);
+        expect(invitationMail.subject).toBe("Workspace invitation | Caseward");
+        expect(invitationMail.html).toContain('alt="Caseward"');
+        expect(invitationMail.text).toContain("Authentication smoke workspace");
+        expect(invitationMail.text).toMatch(/\/invitations\/[a-f0-9]{64}/);
+        await expect(
+            page.getByRole("button", {
+                name: `Resend invitation to ${invitee}`,
+            }),
+        ).toBeDisabled();
+        await page
+            .getByRole("button", { name: `Revoke invitation for ${invitee}` })
+            .click();
+        await page
+            .getByRole("button", { name: "Revoke invitation", exact: true })
+            .click();
+        await expect(
+            page.getByText(/No outstanding invitations/),
+        ).toBeVisible();
+        await expect(
+            page.getByRole("heading", { name: "Invitations", exact: true }),
+        ).toBeFocused();
+        await page
+            .getByRole("link", { name: "Back to workspace", exact: true })
+            .click();
+        await expect(page).toHaveURL(workspaceUrl);
         await page.reload();
         await expect(page).toHaveURL(workspaceUrl);
         await page

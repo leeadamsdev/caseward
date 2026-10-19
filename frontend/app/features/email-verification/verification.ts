@@ -14,7 +14,16 @@ import {
     type RateLimit,
     type RetryWindow,
 } from "~/lib/api";
-import { verificationPath, verificationSignIn } from "./links";
+import { verificationPath } from "./links";
+import {
+    authReturnTo,
+    withReturnTo,
+} from "~/features/authentication/return-to";
+import {
+    pendingInvitation,
+    rememberInvitation,
+} from "~/features/workspace-invitations/continuation";
+import { invitationPath } from "~/features/workspace-invitations/links";
 
 export type VerificationResult =
     | { status: "verified" | "invalid" | "account-mismatch" | "email-mismatch" }
@@ -36,6 +45,8 @@ export async function waitingAction({
     request: Request;
 }): Promise<ResendResult | Response> {
     const data = await request.clone().formData();
+    const value = data.get("returnTo");
+    const returnTo = authReturnTo(typeof value === "string" ? value : null);
     if (data.get("intent") === "logout") return signOut({ request });
     if (data.get("intent") !== "resend")
         return { status: "error", reason: "server" };
@@ -44,7 +55,8 @@ export async function waitingAction({
         "/api/email/verification-notification",
     );
     if (!(response instanceof Response)) return response;
-    if (response.status === 204) return redirect("/workspaces");
+    if (response.status === 204)
+        return redirect(invitationPath(returnTo ?? null) ?? "/workspaces");
     if (response.status === 202) {
         const parsed = ResendVerificationEmail202Response.safeParse(
             await responseBody(response),
@@ -54,10 +66,10 @@ export async function waitingAction({
             : { status: "error", reason: "server" };
     }
     if (response.status === 401) {
-        const value = data.get("returnTo");
-        const path = verificationPath(typeof value === "string" ? value : null);
         return redirect(
-            path ? verificationSignIn(path) : "/login?reason=session",
+            returnTo
+                ? withReturnTo("/login", returnTo)
+                : "/login?reason=session",
         );
     }
     if (response.status === 419) return { status: "error", reason: "expired" };
@@ -80,9 +92,16 @@ export async function waitingAction({
 }
 
 export async function waitingLoader({ request }: { request: Request }) {
+    const returnTo = authReturnTo(
+        new URL(request.url).searchParams.get("returnTo"),
+    );
     const session = await loadSession(request);
-    if (session.status === "guest") return redirect("/login?reason=session");
-    if (session.status === "authenticated") return redirect("/workspaces");
+    if (session.status === "guest")
+        return redirect(withReturnTo("/login?reason=session", returnTo));
+    if (session.status === "authenticated")
+        return redirect(returnTo ?? "/workspaces");
+    if (session.status === "unverified" && returnTo)
+        rememberInvitation(returnTo, session.user.id);
     return session;
 }
 
@@ -91,8 +110,14 @@ export async function verificationLoader({ request }: { request: Request }) {
     const path = verificationPath(url.pathname + url.search);
     if (!path) return { status: "invalid" as const };
     const session = await loadSession(request);
-    if (session.status === "guest") return redirect(verificationSignIn(path));
-    return { ...session, path };
+    if (session.status === "guest")
+        return redirect(withReturnTo("/login", path));
+    if (session.status === "error") return session;
+    return {
+        ...session,
+        path,
+        continuation: pendingInvitation(session.user.id),
+    };
 }
 
 export async function verifyEmail({
@@ -111,7 +136,7 @@ export async function verifyEmail({
     const response = await sessionRequest(request, `/api${path}`);
     if (!(response instanceof Response)) return response;
     if (response.status === 204) return { status: "verified" };
-    if (response.status === 401) return redirect(verificationSignIn(path));
+    if (response.status === 401) return redirect(withReturnTo("/login", path));
     if (response.status === 419) return { status: "error", reason: "expired" };
     if (response.status === 429) return rateLimit(response);
     if (response.status === 403) {

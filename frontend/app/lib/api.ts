@@ -50,7 +50,7 @@ export async function sessionRequest(
         method = "POST",
         values,
     }: {
-        method?: "POST" | "PATCH";
+        method?: "POST" | "PATCH" | "DELETE";
         values?: Record<string, string | number | boolean>;
     } = {},
 ): Promise<Response | ApiFailure> {

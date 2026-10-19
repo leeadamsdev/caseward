@@ -1,5 +1,18 @@
-import { expect, type APIRequestContext } from "@playwright/test";
+import { expect, type APIRequestContext, type Page } from "@playwright/test";
 import { isRecord } from "../../../app/lib/api";
+
+export async function mailActionLink(page: Page, html: string) {
+    const link = await page.evaluate(
+        (value) =>
+            new DOMParser()
+                .parseFromString(value, "text/html")
+                .querySelector("a[href]")
+                ?.getAttribute("href"),
+        html,
+    );
+    if (!link) throw new Error("Email has no action link");
+    return link;
+}
 
 export async function capturedMail(request: APIRequestContext, query: string) {
     let messageId: string | undefined;

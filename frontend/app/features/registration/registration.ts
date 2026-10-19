@@ -12,6 +12,10 @@ import {
 import { userSchema } from "~/features/authentication/session";
 import { Register201Response } from "~/generated/api/operations";
 import type { RegisterRequest } from "~/generated/api/operations.schemas";
+import {
+    authReturnTo,
+    withReturnTo,
+} from "~/features/authentication/return-to";
 
 const registrationSchema = Register201Response.extend({ data: userSchema });
 
@@ -69,11 +73,17 @@ export async function registerAccount(
     const parsed = registrationSchema.safeParse(body);
     if (!parsed.success) return { status: "error", reason: "server" };
     const { data: user, meta } = parsed.data;
+    const returnTo = authReturnTo(
+        new URL(request.url).searchParams.get("returnTo"),
+    );
     return redirect(
         user.email_verified
-            ? "/workspaces"
-            : meta.verification_email_queued
-              ? "/verify-email"
-              : "/verify-email?queue=failed",
+            ? (returnTo ?? "/workspaces")
+            : withReturnTo(
+                  meta.verification_email_queued
+                      ? "/verify-email"
+                      : "/verify-email?queue=failed",
+                  returnTo,
+              ),
     );
 }

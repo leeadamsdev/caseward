@@ -4,10 +4,8 @@ import {
     type UserResource as User,
 } from "~/generated/api/operations.schemas";
 import { GetSession200Response } from "~/generated/api/operations";
-import {
-    verificationPath,
-    verificationSignIn,
-} from "~/features/email-verification/links";
+import { authReturnTo, withReturnTo } from "./return-to";
+import { forgetInvitation } from "~/features/workspace-invitations/continuation";
 import {
     apiRequest,
     responseBody,
@@ -47,7 +45,7 @@ export async function guestLoader({ request }: { request: Request }) {
     const session = await loadSession(request);
     if (session.status === "guest" || session.status === "error")
         return session;
-    const returnTo = verificationPath(
+    const returnTo = authReturnTo(
         new URL(request.url).searchParams.get("returnTo"),
     );
     return redirect(
@@ -65,11 +63,13 @@ export async function verifiedSessionLoader({ request }: { request: Request }) {
 
 export async function signOut({ request }: { request: Request }) {
     const value = (await request.formData()).get("returnTo");
-    const returnTo = verificationPath(typeof value === "string" ? value : null);
+    const returnTo = authReturnTo(typeof value === "string" ? value : null);
     const response = await sessionRequest(request, "/api/logout");
     if (!(response instanceof Response)) return response;
-    if (response.status === 204 || response.status === 401)
-        return redirect(verificationSignIn(returnTo));
+    if (response.status === 204 || response.status === 401) {
+        forgetInvitation();
+        return redirect(withReturnTo("/login", returnTo));
+    }
     return {
         status: "error",
         reason: response.status === 419 ? "expired" : "server",

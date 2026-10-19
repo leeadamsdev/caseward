@@ -1,6 +1,10 @@
 import { ArrowLeft, Mail } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { useFetcher } from "react-router";
+import { useFetcher, useSearchParams } from "react-router";
+import {
+    authReturnTo,
+    withReturnTo,
+} from "~/features/authentication/return-to";
 import { FormField } from "~/components/forms/form-field";
 import {
     RateLimitNotice,
@@ -13,6 +17,8 @@ import { CardHeading } from "~/components/layout/card-page";
 import { recoveryFields, type RecoveryRequestResult } from "./forgot-password";
 
 export function ForgotPasswordForm() {
+    const [params] = useSearchParams();
+    const returnTo = authReturnTo(params.get("returnTo"));
     const fetcher = useFetcher<RecoveryRequestResult>();
     const result = fetcher.data;
     const pending = fetcher.state !== "idle";
@@ -139,7 +145,7 @@ export function ForgotPasswordForm() {
                 </>
             )}
             <ButtonLink
-                to="/login"
+                to={withReturnTo("/login", returnTo)}
                 variant={accepted ? "ghost" : "outline"}
                 className="mt-3 w-full px-4 py-3"
             >

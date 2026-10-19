@@ -9,6 +9,11 @@ use App\Actions\WithVerificationEmailLimit;
 use App\Http\Requests\UpdateEmailRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use Dedoc\Scramble\Attributes\Endpoint;
+use Dedoc\Scramble\Attributes\Header;
+use Dedoc\Scramble\Attributes\IgnoreResponse;
+use Dedoc\Scramble\Attributes\QueryParameter;
+use Dedoc\Scramble\Attributes\Response as ApiResponse;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
@@ -19,6 +24,10 @@ use Illuminate\Validation\ValidationException;
 
 class EmailVerificationController
 {
+    #[Endpoint(operationId: 'verifyEmail', title: 'Verify an email address', description: 'Post the signed path and query from the email unchanged. Requires the session for the account named by the link.')]
+    #[QueryParameter('expires', required: true, type: 'int', description: 'Signed Unix expiry timestamp.')]
+    #[QueryParameter('signature', required: true, type: 'string', description: 'Signed URL HMAC.')]
+    #[ApiResponse(403, type: 'array{message: string, code: "invalid_verification_link"|"verification_account_mismatch"|"verification_email_mismatch"}')]
     public function verify(Request $request, string $id, string $hash): Response
     {
         $account = $this->user($request);
@@ -56,6 +65,12 @@ class EmailVerificationController
         return response()->noContent();
     }
 
+    #[Endpoint(operationId: 'resendVerificationEmail', title: 'Resend the verification email', description: 'Shares the per-account delivery quota with email correction: one per cooldown and five per hour, plus ten requests per minute. Already-verified accounts return 204 without sending.')]
+    #[IgnoreResponse(200)]
+    #[ApiResponse(204)]
+    #[Header('Retry-After', type: 'int', required: false, status: 204, description: 'Seconds until another delivery is allowed; absent for an already-verified account.')]
+    #[ApiResponse(503, type: 'array{message: string, code: "verification_email_unavailable"}')]
+    #[Header('Retry-After', type: 'int', required: true, status: 503, description: 'Delivery retry delay in seconds.')]
     public function resend(Request $request, SendVerificationEmail $verificationEmail, WithVerificationEmailLimit $limit): Response
     {
         $user = $this->user($request);
@@ -76,6 +91,10 @@ class EmailVerificationController
         });
     }
 
+    #[Endpoint(operationId: 'updateUnverifiedEmail', title: 'Correct an unverified email address', description: 'Bind account_id to the account shown by the form. Shares the resend quota. A false verification_email_sent value means the address was saved but delivery failed.')]
+    #[ApiResponse(200, type: 'array{data: UserResource, meta: array{verification_email_sent: bool}}')]
+    #[ApiResponse(403, type: 'array{message: string, code: "email_already_verified"}')]
+    #[ApiResponse(409, type: 'array{message: string, code: "account_context_changed"}')]
     public function update(UpdateEmailRequest $request, SendVerificationEmail $verificationEmail, WithVerificationEmailLimit $limit): UserResource
     {
         $account = $this->user($request);

@@ -16,9 +16,11 @@
         "symfony/http-client": "^8.1"
     },
     "require-dev": {
+        "dedoc/scramble": "^0.13.49",
         "larastan/larastan": "^3.0",
         "laravel/pint": "^1.27",
         "mockery/mockery": "^1.6.15",
+        "opis/json-schema": "^2.6",
         "phpstan/phpstan": "^2.1",
         "phpunit/phpunit": "^13.4.3"
     },
@@ -44,6 +46,7 @@
         ],
         "format": "pint",
         "format:check": "pint --test",
+        "openapi:export": "@php artisan scramble:export --fail-on-unknown",
         "test": "phpunit",
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

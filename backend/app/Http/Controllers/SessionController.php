@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
+use Dedoc\Scramble\Attributes\Endpoint;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +14,7 @@ use Illuminate\Validation\ValidationException;
 
 class SessionController
 {
+    #[Endpoint(operationId: 'login', title: 'Sign in', description: 'Creates a session, including for unverified accounts. With remember=true the session has a fixed 30-day deadline; otherwise its cookie expires when the browser closes. Both sessions remain subject to server-side expiry and revocation.')]
     public function store(LoginRequest $request): Response
     {
         if (! Auth::guard('web')->attempt($request->only('email', 'password'))) {
@@ -28,6 +30,7 @@ class SessionController
         return response()->noContent();
     }
 
+    #[Endpoint(operationId: 'logout', title: 'Sign out')]
     public function destroy(Request $request): Response
     {
         Auth::guard('web')->logout();

@@ -8,12 +8,16 @@ use App\Actions\RecoverPassword;
 use App\Http\Requests\ForgotPasswordRequest;
 use App\Http\Requests\ResetPasswordRequest;
 use App\Jobs\RequestPasswordReset;
+use Dedoc\Scramble\Attributes\Endpoint;
+use Dedoc\Scramble\Attributes\Header;
+use Dedoc\Scramble\Attributes\Response as ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Bus;
 
 class PasswordRecoveryController
 {
+    #[Endpoint(operationId: 'requestPasswordReset', title: 'Request a password reset', description: 'Queues the request and returns the same response whether or not the account exists. Acceptance does not guarantee delivery.')]
     public function store(ForgotPasswordRequest $request): JsonResponse
     {
         // Enqueue before looking up the address so response timing does not depend on account existence or delivery.
@@ -24,6 +28,10 @@ class PasswordRecoveryController
         ], 202, ['Cache-Control' => 'no-store, private']);
     }
 
+    #[Endpoint(operationId: 'resetPassword', title: 'Reset a password', description: 'Consumes the one-use reset token and revokes existing sessions. Does not sign the user in.')]
+    #[ApiResponse(422, type: 'array{message: string, errors: array<string, list<string>>}|array{message: string, code: "invalid_password_reset_link"}')]
+    #[Header('Cache-Control', type: '"no-store, private"', required: true, status: 204)]
+    #[Header('Cache-Control', type: '"no-store, private"|"no-cache, private"', required: true, status: 422)]
     public function update(ResetPasswordRequest $request, RecoverPassword $recovery): Response|JsonResponse
     {
         if (! $recovery->reset(

@@ -9,6 +9,10 @@ use App\Http\Requests\CreateWorkspaceRequest;
 use App\Http\Resources\WorkspaceResource;
 use App\Models\User;
 use App\Models\Workspace;
+use Dedoc\Scramble\Attributes\Endpoint;
+use Dedoc\Scramble\Attributes\Header;
+use Dedoc\Scramble\Attributes\QueryParameter;
+use Dedoc\Scramble\Attributes\Response as ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -17,12 +21,18 @@ use LogicException;
 
 class WorkspaceController
 {
+    #[Endpoint(operationId: 'listWorkspaces', title: 'List your workspaces', description: 'Membership-scoped, ordered by name then ID, with 25 results per page.')]
+    #[QueryParameter('page', type: 'int', default: 1, description: 'Page number, starting at one.')]
     public function index(Request $request): AnonymousResourceCollection
     {
         return WorkspaceResource::collection($this->user($request)->workspaces()
             ->orderBy('workspaces.name')->orderBy('workspaces.id')->paginate(25));
     }
 
+    #[Endpoint(operationId: 'createWorkspace', title: 'Create a workspace', description: 'Creates the workspace and owner membership atomically. Bind account_id to the account shown by the form.')]
+    #[ApiResponse(409, type: 'array{message: string, code: "account_context_changed"}')]
+    #[Header('Location', type: 'string', required: true, status: 201, description: 'Relative API URL of the created workspace.')]
+    #[Header('Cache-Control', type: '"no-store, private"', required: true, status: 201)]
     public function store(CreateWorkspaceRequest $request): JsonResponse
     {
         $user = $this->user($request);
@@ -49,6 +59,7 @@ class WorkspaceController
             ->header('Location', route('workspaces.show', ['workspace' => $workspace->id], absolute: false));
     }
 
+    #[Endpoint(operationId: 'getWorkspace', title: 'Get a workspace', description: 'Unknown workspaces and workspaces without membership both return 404.')]
     public function show(Request $request, string $workspace): WorkspaceResource
     {
         // Scope before lookup so another tenant's ID is indistinguishable from an unknown ID.

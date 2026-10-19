@@ -24,6 +24,9 @@ services:
             - ./.editorconfig:/var/www/.editorconfig:ro
             - frontend_node_modules:/var/www/app/node_modules
             - frontend_router_types:/var/www/app/.react-router
+            - ./backend/openapi.json:/var/www/backend/openapi.json:ro
+        tmpfs:
+            - /tmp:mode=1777
         environment:
             CHOKIDAR_USEPOLLING: "true"
             API_PROXY_TARGET: http://backend:8000

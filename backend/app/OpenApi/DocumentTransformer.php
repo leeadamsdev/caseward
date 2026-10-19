@@ -7,6 +7,7 @@ namespace App\OpenApi;
 use Dedoc\Scramble\Contracts\DocumentTransformer as Transformer;
 use Dedoc\Scramble\OpenApiContext;
 use Dedoc\Scramble\Support\Generator\OpenApi;
+use Dedoc\Scramble\Support\Generator\Response;
 use Dedoc\Scramble\Support\Generator\Schema;
 use Dedoc\Scramble\Support\Generator\SecuritySchemes\ApiKeySecurityScheme;
 use Dedoc\Scramble\Support\Generator\Server;
@@ -32,6 +33,16 @@ class DocumentTransformer implements Transformer
         $workspace = $document->components->schemas['WorkspaceResource'] ?? null;
         if ($workspace instanceof Schema && $workspace->type instanceof ObjectType) {
             $workspace->type->properties['id'] = (new StringType)->pattern('^[0-7][0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{25}$');
+        }
+
+        // Expose reusable exception bodies as schemas as well as complete HTTP responses.
+        foreach ($document->components->responses as $name => $response) {
+            if ($response instanceof Response && isset($response->content['application/json'])) {
+                $body = $response->getContent('application/json');
+                if ($body instanceof Schema) {
+                    $response->setContent('application/json', $document->components->addSchema($name, $body));
+                }
+            }
         }
     }
 }

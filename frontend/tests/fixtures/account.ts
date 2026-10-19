@@ -1,4 +1,4 @@
-import type { User } from "~/features/authentication/session";
+import type { UserResource as User } from "~/generated/api/models";
 
 export const password = "  a long Unicode passphrase 🔐  ";
 export const account = {

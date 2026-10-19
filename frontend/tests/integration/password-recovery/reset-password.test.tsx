@@ -157,7 +157,10 @@ test("shows recovery for a malformed link without rendering editable credentials
 test.each([
     {
         name: "invalid reset link",
-        body: { code: "invalid_password_reset_link" },
+        body: {
+            message: "This password reset link is invalid or has expired.",
+            code: "invalid_password_reset_link",
+        },
     },
     {
         name: "invalid email",

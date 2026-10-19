@@ -1,54 +1,44 @@
 import { redirect } from "react-router";
 import {
+    UserResource,
+    type UserResource as User,
+} from "~/generated/api/models";
+import { GetSession200Response } from "~/generated/api/operations";
+import {
     verificationPath,
     verificationSignIn,
 } from "~/features/email-verification/links";
 import {
     apiRequest,
-    isRecord,
     responseBody,
     sessionRequest,
     type ApiFailure,
 } from "~/lib/api";
 
-export type User = {
-    id: number;
-    name: string;
-    email: string;
-    email_verified: boolean;
-};
+// The interface cannot safely display blank identities or nonpositive account IDs.
+export const userSchema = UserResource.refine(
+    (user) =>
+        user.id > 0 && Boolean(user.name.trim()) && Boolean(user.email.trim()),
+);
+const sessionSchema = GetSession200Response.extend({ data: userSchema });
 export type SessionResult =
     | { status: "authenticated" | "unverified"; user: User }
     | { status: "guest" }
     | ApiFailure;
-
-export function parseUser(value: unknown): User | undefined {
-    if (!isRecord(value) || !isRecord(value.data)) return;
-    const { id, name, email, email_verified } = value.data;
-    if (
-        typeof id === "number" &&
-        Number.isSafeInteger(id) &&
-        id > 0 &&
-        typeof name === "string" &&
-        name.trim() &&
-        typeof email === "string" &&
-        email.trim() &&
-        typeof email_verified === "boolean"
-    )
-        return { id, name, email, email_verified };
-}
 
 export async function loadSession(request: Request): Promise<SessionResult> {
     const response = await apiRequest(request, "/api/session");
     if (!(response instanceof Response)) return response;
     if (response.status === 401) return { status: "guest" };
     if (response.status === 200) {
-        const user = parseUser(await responseBody(response));
-        if (user)
+        const parsed = sessionSchema.safeParse(await responseBody(response));
+        if (parsed.success) {
+            const user = parsed.data.data;
             return {
                 status: user.email_verified ? "authenticated" : "unverified",
                 user,
             };
+        }
     }
     return { status: "error", reason: "server" };
 }

@@ -1,8 +1,13 @@
 import { redirect } from "react-router";
 import { emailField } from "~/components/forms/email-field";
-import { parseUser } from "~/features/authentication/session";
+import { userSchema } from "~/features/authentication/session";
+import type { UpdateEmailRequest } from "~/generated/api/models";
 import {
-    isRecord,
+    UpdateUnverifiedEmail200Response,
+    UpdateUnverifiedEmail403Response,
+    UpdateUnverifiedEmail409Response,
+} from "~/generated/api/operations";
+import {
     rateLimit,
     requiredFields,
     responseBody,
@@ -12,6 +17,9 @@ import {
 } from "~/lib/api";
 
 export const emailFields = [emailField] as const;
+const correctionSchema = UpdateUnverifiedEmail200Response.extend({
+    data: userSchema,
+});
 
 export type ChangeEmailResult = FormFailure<"email">;
 
@@ -24,11 +32,18 @@ export async function changeEmail({
     const { values, errors } = requiredFields(data, emailFields);
     if (Object.keys(errors).length > 0) return { status: "validation", errors };
     const accountId = data.get("account_id");
-    if (typeof accountId !== "string" || !/^[1-9]\d*$/.test(accountId))
+    if (
+        typeof accountId !== "string" ||
+        !/^[1-9]\d*$/.test(accountId) ||
+        !Number.isSafeInteger(Number(accountId))
+    )
         return { status: "error", reason: "server" };
     const response = await sessionRequest(request, "/api/email", {
         method: "PATCH",
-        values: { ...values, account_id: accountId },
+        values: {
+            email: values.email ?? "",
+            account_id: Number(accountId),
+        } satisfies UpdateEmailRequest,
     });
     if (!(response instanceof Response)) return response;
     if (response.status === 401) return redirect("/login?reason=session");
@@ -37,8 +52,8 @@ export async function changeEmail({
     const body = await responseBody(response);
     if (
         response.status === 409 &&
-        isRecord(body) &&
-        body.code === "account_context_changed"
+        UpdateUnverifiedEmail409Response.pick({ code: true }).safeParse(body)
+            .success
     )
         return redirect("/verify-email?account=changed");
     if (response.status === 422) {
@@ -49,23 +64,18 @@ export async function changeEmail({
     }
     if (
         response.status === 403 &&
-        isRecord(body) &&
-        body.code === "email_already_verified"
+        UpdateUnverifiedEmail403Response.pick({ code: true }).safeParse(body)
+            .success
     )
         return redirect("/workspaces");
     if (response.status !== 200) return { status: "error", reason: "server" };
-    const user = parseUser(body);
-    if (
-        !user ||
-        !isRecord(body) ||
-        !isRecord(body.meta) ||
-        typeof body.meta.verification_email_sent !== "boolean"
-    )
-        return { status: "error", reason: "server" };
+    const parsed = correctionSchema.safeParse(body);
+    if (!parsed.success) return { status: "error", reason: "server" };
+    const { data: user, meta } = parsed.data;
     return redirect(
         user.email_verified
             ? "/workspaces"
-            : body.meta.verification_email_sent
+            : meta.verification_email_sent
               ? "/verify-email?updated=1"
               : "/verify-email?updated=1&delivery=failed",
     );

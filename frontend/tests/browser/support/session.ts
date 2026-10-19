@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
-import type { User } from "../../../app/features/authentication/session";
-import type { Workspace } from "../../../app/features/workspaces/workspaces";
+import type { UserResource as User } from "../../../app/generated/api/models";
+import type { WorkspaceResource as Workspace } from "../../../app/generated/api/models";
 import { workspacePage } from "../../fixtures/workspaces";
 
 export async function mockWorkspaces(page: Page, items: Workspace[] = []) {

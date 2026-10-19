@@ -1,13 +1,19 @@
-import { expect, test } from "vitest";
-import { parseUser } from "~/features/authentication/session";
+import { expect, test, vi } from "vitest";
+import { loadSession } from "~/features/authentication/session";
 import { user } from "../../fixtures/account";
 
-test("parses verified and unverified accounts without retaining extra response fields", () => {
+test("parses verified and unverified accounts without retaining extra response fields", async () => {
     for (const email_verified of [true, false]) {
         const account = { ...user, email_verified };
+        vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+            Response.json({ data: { ...account, private: "Diagnostic" } }),
+        );
         expect(
-            parseUser({ data: { ...account, private: "Diagnostic" } }),
-        ).toEqual(account);
+            await loadSession(new Request("http://localhost/register")),
+        ).toEqual({
+            status: email_verified ? "authenticated" : "unverified",
+            user: account,
+        });
     }
 });
 
@@ -28,6 +34,14 @@ test.each([
         name: "nonboolean verification",
         body: { data: { ...user, email_verified: "true" } },
     },
-])("rejects $name instead of trusting its TypeScript shape", ({ body }) => {
-    expect(parseUser(body)).toBeUndefined();
-});
+])(
+    "rejects $name instead of trusting its TypeScript shape",
+    async ({ body }) => {
+        vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+            Response.json(body),
+        );
+        expect(
+            await loadSession(new Request("http://localhost/register")),
+        ).toEqual({ status: "error", reason: "server" });
+    },
+);

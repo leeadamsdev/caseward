@@ -1,8 +1,9 @@
 import { newPasswordFields } from "~/components/forms/new-password-fields";
+import type { ResetPasswordRequest } from "~/generated/api/models";
+import { ResetPassword422Response } from "~/generated/api/operations";
 import { guestLoader } from "~/features/authentication/session";
 import { resetLink } from "./reset-link";
 import {
-    isRecord,
     rateLimit,
     requiredFields,
     responseBody,
@@ -43,7 +44,11 @@ export async function resetPassword(
     if (Object.keys(errors).length > 0) return { status: "validation", errors };
 
     const response = await sessionRequest(request, "/api/reset-password", {
-        values: { ...values, ...link },
+        values: {
+            ...link,
+            password: values.password ?? "",
+            password_confirmation: values.password_confirmation ?? "",
+        } satisfies ResetPasswordRequest,
     });
     if (!(response instanceof Response)) return response;
     if (response.status === 204) return { status: "reset" };
@@ -55,8 +60,9 @@ export async function resetPassword(
     }
     const body = await responseBody(response);
     if (response.status === 422) {
+        const parsed = ResetPassword422Response.safeParse(body);
         if (
-            (isRecord(body) && body.code === "invalid_password_reset_link") ||
+            (parsed.success && "code" in parsed.data) ||
             validationErrors(body, [{ name: "email" }, { name: "token" }])
         )
             return { status: "invalid" };

@@ -12,7 +12,11 @@ export function affectedJobs(paths) {
         );
     const frontend =
         shared ||
-        paths.some((path) => /^(?:frontend\/|docker\/frontend\/)/.test(path));
+        paths.some(
+            (path) =>
+                path === "backend/openapi.json" ||
+                /^(?:frontend\/|docker\/frontend\/)/.test(path),
+        );
     const integration =
         backend || frontend || paths.some((path) => path.startsWith("docker/"));
     return { backend, frontend, integration };

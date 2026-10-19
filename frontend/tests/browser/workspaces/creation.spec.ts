@@ -34,7 +34,7 @@ test("routes a new account into creation and opens the real workspace destinatio
         requests++;
         expect(route.request().postDataJSON()).toEqual({
             name: "Acme Support",
-            account_id: "7",
+            account_id: 7,
         });
         expect(route.request().headers()["x-xsrf-token"]).toBe("test=token");
         await pending;
@@ -114,7 +114,7 @@ test("validates locally and preserves backend validation, hints and the entered 
     await page.route("**/api/workspaces", (route) => {
         expect(route.request().postDataJSON()).toEqual({
             name: "  Équipe 東京  ",
-            account_id: "7",
+            account_id: 7,
         });
         return route.fulfill({
             status: 422,
@@ -248,7 +248,7 @@ test("resets a stale form when another tab switches the account", async ({
     await page.route("**/api/workspaces", async (route) => {
         expect(route.request().postDataJSON()).toEqual({
             name: "Private workspace",
-            account_id: "7",
+            account_id: 7,
         });
         await mockSignedInSession(page, {
             ...user,

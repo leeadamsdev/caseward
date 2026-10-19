@@ -82,7 +82,7 @@ test("creates through a protected account-bound request and opens the server wor
         {
             body: {
                 name: "  Équipe 東京  ",
-                account_id: account.id.toString(),
+                account_id: account.id,
             },
             csrf: "test=token",
         },
@@ -226,7 +226,7 @@ test.each([204, 503])(
     },
 );
 
-test.each(["", "0", "unexpected"])(
+test.each(["", "0", "unexpected", "01", "9007199254740992"])(
     "rejects invalid account context %j before creation",
     async (accountId) => {
         const data = new FormData();

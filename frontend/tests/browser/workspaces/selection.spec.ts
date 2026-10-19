@@ -4,7 +4,7 @@ import {
     mockSignedInSession,
     mockWorkspaces as list,
 } from "../support/session";
-import type { Workspace } from "../../../app/features/workspaces/workspaces";
+import type { WorkspaceResource as Workspace } from "../../../app/generated/api/models";
 import { user } from "../../fixtures/account";
 import { workspace, workspaceId as id } from "../../fixtures/workspaces";
 

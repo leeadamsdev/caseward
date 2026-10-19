@@ -1672,6 +1672,32 @@
             }
         },
         "schemas": {
+            "AuthenticationException": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Error overview."
+                    }
+                },
+                "required": [
+                    "message"
+                ],
+                "title": "AuthenticationException"
+            },
+            "AuthorizationException": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Error overview."
+                    }
+                },
+                "required": [
+                    "message"
+                ],
+                "title": "AuthorizationException"
+            },
             "CreateWorkspaceRequest": {
                 "type": "object",
                 "properties": {
@@ -1725,6 +1751,19 @@
                     "password"
                 ],
                 "title": "LoginRequest"
+            },
+            "ModelNotFoundException": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Error overview."
+                    }
+                },
+                "required": [
+                    "message"
+                ],
+                "title": "ModelNotFoundException"
             },
             "RegisterRequest": {
                 "type": "object",
@@ -1833,6 +1872,30 @@
                 ],
                 "title": "UserResource"
             },
+            "ValidationException": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Errors overview."
+                    },
+                    "errors": {
+                        "type": "object",
+                        "description": "A detailed description of each field that failed validation.",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "message",
+                    "errors"
+                ],
+                "title": "ValidationException"
+            },
             "WorkspaceResource": {
                 "type": "object",
                 "properties": {
@@ -1869,27 +1932,7 @@
                 "content": {
                     "application/json": {
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "message": {
-                                    "type": "string",
-                                    "description": "Errors overview."
-                                },
-                                "errors": {
-                                    "type": "object",
-                                    "description": "A detailed description of each field that failed validation.",
-                                    "additionalProperties": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            },
-                            "required": [
-                                "message",
-                                "errors"
-                            ]
+                            "$ref": "#/components/schemas/ValidationException"
                         }
                     }
                 }
@@ -1899,16 +1942,7 @@
                 "content": {
                     "application/json": {
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "message": {
-                                    "type": "string",
-                                    "description": "Error overview."
-                                }
-                            },
-                            "required": [
-                                "message"
-                            ]
+                            "$ref": "#/components/schemas/AuthorizationException"
                         }
                     }
                 }
@@ -1918,16 +1952,7 @@
                 "content": {
                     "application/json": {
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "message": {
-                                    "type": "string",
-                                    "description": "Error overview."
-                                }
-                            },
-                            "required": [
-                                "message"
-                            ]
+                            "$ref": "#/components/schemas/AuthenticationException"
                         }
                     }
                 }
@@ -1937,16 +1962,7 @@
                 "content": {
                     "application/json": {
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "message": {
-                                    "type": "string",
-                                    "description": "Error overview."
-                                }
-                            },
-                            "required": [
-                                "message"
-                            ]
+                            "$ref": "#/components/schemas/ModelNotFoundException"
                         }
                     }
                 }

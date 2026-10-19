@@ -1,11 +1,23 @@
 import { redirect } from "react-router";
+import { z } from "zod";
+import {
+    WorkspaceResource,
+    type WorkspaceResource as Workspace,
+    type CreateWorkspaceRequest,
+} from "~/generated/api/models";
+import {
+    CreateWorkspace201Response,
+    CreateWorkspace409Response,
+    GetWorkspace200Response,
+    ListWorkspaces200Response,
+    ListWorkspaces403Response,
+} from "~/generated/api/operations";
 import {
     verifiedSessionLoader,
     signOut,
 } from "~/features/authentication/session";
 import {
     apiRequest,
-    isRecord,
     rateLimit,
     requiredFields,
     responseBody,
@@ -15,7 +27,6 @@ import {
     type FormFailure,
 } from "~/lib/api";
 
-export type Workspace = { id: string; name: string; role: "owner" | "member" };
 type WorkspacePage = {
     items: Workspace[];
     page: number;
@@ -29,7 +40,30 @@ type WorkspaceResult =
     | { status: "missing" }
     | ApiFailure;
 export type CreateWorkspaceResult = FormFailure<"name">;
-const workspaceIdPattern = /^[0-7][0-9a-hjkmnp-tv-z]{25}$/i;
+const workspaceSchema = WorkspaceResource.refine((workspace) =>
+    Boolean(workspace.name.trim()),
+);
+const workspaceResponseSchema = GetWorkspace200Response.extend({
+    data: workspaceSchema,
+});
+const creationSchema = CreateWorkspace201Response.extend({
+    data: workspaceSchema,
+});
+const pageSchema = ListWorkspaces200Response.extend({
+    data: z.array(workspaceSchema),
+}).refine(
+    ({ data, meta }) =>
+        meta.per_page > 0 &&
+        data.length <= meta.per_page &&
+        data.length <= meta.total &&
+        new Set(data.map((workspace) => workspace.id)).size === data.length &&
+        meta.last_page === Math.max(1, Math.ceil(meta.total / meta.per_page)) &&
+        !(
+            data.length === 0 &&
+            meta.total > 0 &&
+            meta.current_page <= meta.last_page
+        ),
+);
 
 export const workspaceFields = [
     {
@@ -41,52 +75,10 @@ export const workspaceFields = [
     },
 ] as const;
 
-function parseWorkspace(value: unknown): Workspace | undefined {
-    if (!isRecord(value)) return;
-    const { id, name, role } = value;
-    if (
-        typeof id === "string" &&
-        workspaceIdPattern.test(id) &&
-        typeof name === "string" &&
-        name.trim() &&
-        (role === "owner" || role === "member")
-    )
-        return { id, name, role };
-}
-
 function positiveInteger(value: unknown): value is number {
     return (
         typeof value === "number" && Number.isSafeInteger(value) && value > 0
     );
-}
-
-function parseWorkspacePage(value: unknown): WorkspacePage | undefined {
-    if (!isRecord(value) || !Array.isArray(value.data) || !isRecord(value.meta))
-        return;
-    const { current_page, last_page, total } = value.meta;
-    if (
-        !positiveInteger(current_page) ||
-        !positiveInteger(last_page) ||
-        typeof total !== "number" ||
-        !Number.isSafeInteger(total) ||
-        total < 0 ||
-        value.data.length > 25
-    )
-        return;
-    const items: Workspace[] = [];
-    for (const entry of value.data) {
-        const workspace = parseWorkspace(entry);
-        if (!workspace || items.some((item) => item.id === workspace.id))
-            return;
-        items.push(workspace);
-    }
-    if (
-        last_page !== Math.max(1, Math.ceil(total / 25)) ||
-        items.length > total ||
-        (items.length === 0 && total > 0 && current_page <= last_page)
-    )
-        return;
-    return { items, page: current_page, lastPage: last_page, total };
 }
 
 export function workspacePath(workspace: Workspace) {
@@ -100,8 +92,7 @@ function accessRedirect(response: Response, body: unknown) {
     if (response.status === 401) return redirect("/login?reason=session");
     if (
         response.status === 403 &&
-        isRecord(body) &&
-        body.code === "email_unverified"
+        ListWorkspaces403Response.pick({ code: true }).safeParse(body).success
     )
         return redirect("/verify-email");
 }
@@ -118,9 +109,19 @@ async function loadWorkspacePage(
     const body = await responseBody(response);
     const redirected = accessRedirect(response, body);
     if (redirected) return redirected;
-    const page = response.status === 200 ? parseWorkspacePage(body) : undefined;
-    return page && page.page === pageNumber
-        ? { status: "loaded", page }
+    const parsed = pageSchema.safeParse(body);
+    return response.status === 200 &&
+        parsed.success &&
+        parsed.data.meta.current_page === pageNumber
+        ? {
+              status: "loaded",
+              page: {
+                  items: parsed.data.data,
+                  page: parsed.data.meta.current_page,
+                  lastPage: parsed.data.meta.last_page,
+                  total: parsed.data.meta.total,
+              },
+          }
         : { status: "error", reason: "server" };
 }
 
@@ -164,7 +165,10 @@ export async function workspaceLoader({
     if (session instanceof Response || session.status === "error")
         return session;
     let result: WorkspaceResult = { status: "missing" };
-    if (params.workspaceId && workspaceIdPattern.test(params.workspaceId)) {
+    if (
+        params.workspaceId &&
+        WorkspaceResource.shape.id.safeParse(params.workspaceId).success
+    ) {
         const response = await apiRequest(
             request,
             `/api/workspaces/${params.workspaceId}`,
@@ -174,9 +178,8 @@ export async function workspaceLoader({
             const body = await responseBody(response);
             const redirected = accessRedirect(response, body);
             if (redirected) return redirected;
-            const workspace = isRecord(body)
-                ? parseWorkspace(body.data)
-                : undefined;
+            const parsed = workspaceResponseSchema.safeParse(body);
+            const workspace = parsed.success ? parsed.data.data : undefined;
             result =
                 response.status === 404
                     ? { status: "missing" }
@@ -202,10 +205,17 @@ export async function createWorkspace({
     const { values, errors } = requiredFields(data, workspaceFields);
     if (Object.keys(errors).length) return { status: "validation", errors };
     const accountId = data.get("account_id");
-    if (typeof accountId !== "string" || !/^[1-9]\d*$/.test(accountId))
+    if (
+        typeof accountId !== "string" ||
+        !/^[1-9]\d*$/.test(accountId) ||
+        !Number.isSafeInteger(Number(accountId))
+    )
         return { status: "error", reason: "server" };
     const response = await sessionRequest(request, "/api/workspaces", {
-        values: { ...values, account_id: accountId },
+        values: {
+            name: values.name ?? "",
+            account_id: Number(accountId),
+        } satisfies CreateWorkspaceRequest,
     });
     if (!(response instanceof Response)) return response;
     if (response.status === 419) return { status: "error", reason: "expired" };
@@ -215,17 +225,17 @@ export async function createWorkspace({
     if (redirected) return redirected;
     if (
         response.status === 409 &&
-        isRecord(body) &&
-        body.code === "account_context_changed"
+        CreateWorkspace409Response.pick({ code: true }).safeParse(body).success
     )
         return redirect("/workspaces/new?account=changed");
     if (response.status === 422) {
         const errors = validationErrors(body, workspaceFields);
         if (errors) return { status: "validation", errors };
     }
+    const parsed = creationSchema.safeParse(body);
     const workspace =
-        response.status === 201 && isRecord(body)
-            ? parseWorkspace(body.data)
+        response.status === 201 && parsed.success
+            ? parsed.data.data
             : undefined;
     return workspace?.role === "owner"
         ? redirect(workspacePath(workspace))

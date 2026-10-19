@@ -1,3 +1,7 @@
+import { ValidationException } from "~/generated/api/models";
+
+const validationSchema = ValidationException.pick({ errors: true });
+
 export function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -47,7 +51,7 @@ export async function sessionRequest(
         values,
     }: {
         method?: "POST" | "PATCH";
-        values?: Record<string, string | boolean>;
+        values?: Record<string, string | number | boolean>;
     } = {},
 ): Promise<Response | ApiFailure> {
     const bootstrap = await apiRequest(request, "/sanctum/csrf-cookie");
@@ -84,17 +88,15 @@ export function validationErrors<Field extends string>(
     value: unknown,
     fields: readonly { name: Field }[],
 ): FormErrors<Field> | undefined {
-    if (!isRecord(value) || !isRecord(value.errors)) return;
+    const parsed = validationSchema.safeParse(value);
+    if (!parsed.success) return;
     const errors: FormErrors<Field> = {};
     for (const { name } of fields) {
-        const messages = value.errors[name];
+        const messages = parsed.data.errors[name];
         if (
-            Array.isArray(messages) &&
+            messages &&
             messages.length > 0 &&
-            messages.every(
-                (message: unknown) =>
-                    typeof message === "string" && message.trim().length > 0,
-            )
+            messages.every((message) => message.trim().length > 0)
         ) {
             errors[name] = messages;
         }

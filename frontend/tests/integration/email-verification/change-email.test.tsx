@@ -97,7 +97,7 @@ test.each([true, false])(
             {
                 body: {
                     email: "ALEX@EXAMPLE.COM",
-                    account_id: original.id.toString(),
+                    account_id: original.id,
                 },
                 csrf: "test=token",
             },
@@ -214,7 +214,7 @@ test("does not send an update when the CSRF cookie is missing", async () => {
     );
 });
 
-test.each(["", "0", "unexpected"])(
+test.each(["", "0", "unexpected", "01", "9007199254740992"])(
     "rejects invalid account context %j before sending an update",
     async (context) => {
         const data = new FormData();

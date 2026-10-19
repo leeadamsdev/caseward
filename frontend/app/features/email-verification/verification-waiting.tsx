@@ -10,7 +10,7 @@ import {
 import { Button } from "~/components/ui/button";
 import { Notice } from "~/components/ui/notice";
 import { CardHeading } from "~/components/layout/card-page";
-import type { User } from "~/features/authentication/session";
+import type { UserResource as User } from "~/generated/api/models";
 import { SignOutForm } from "~/features/authentication/sign-out-form";
 import { ResendVerificationForm } from "./resend-verification-form";
 import type { ResendResult } from "./verification";

@@ -2,7 +2,6 @@ import { redirect } from "react-router";
 import { emailField } from "~/components/forms/email-field";
 import { newPasswordFields } from "~/components/forms/new-password-fields";
 import {
-    isRecord,
     rateLimit,
     requiredFields,
     responseBody,
@@ -10,7 +9,11 @@ import {
     validationErrors,
     type FormFailure,
 } from "~/lib/api";
-import { parseUser } from "~/features/authentication/session";
+import { userSchema } from "~/features/authentication/session";
+import { Register201Response } from "~/generated/api/operations";
+import type { RegisterRequest } from "~/generated/api/models";
+
+const registrationSchema = Register201Response.extend({ data: userSchema });
 
 export const registrationFields = [
     {
@@ -42,7 +45,15 @@ export async function registerAccount(
         errors.password_confirmation = ["Passwords do not match."];
     if (Object.keys(errors).length > 0) return { status: "validation", errors };
 
-    const response = await sessionRequest(request, "/api/register", { values });
+    const payload = {
+        name: values.name ?? "",
+        email: values.email ?? "",
+        password: values.password ?? "",
+        password_confirmation: values.password_confirmation ?? "",
+    } satisfies RegisterRequest;
+    const response = await sessionRequest(request, "/api/register", {
+        values: payload,
+    });
     if (!(response instanceof Response)) return response;
     if (response.status === 429) return rateLimit(response);
     if (response.status === 419) return { status: "error", reason: "expired" };
@@ -55,18 +66,13 @@ export async function registerAccount(
             ? { status: "validation", errors }
             : { status: "error", reason: "server" };
     }
-    const user = parseUser(body);
-    if (
-        !user ||
-        !isRecord(body) ||
-        !isRecord(body.meta) ||
-        typeof body.meta.verification_email_sent !== "boolean"
-    )
-        return { status: "error", reason: "server" };
+    const parsed = registrationSchema.safeParse(body);
+    if (!parsed.success) return { status: "error", reason: "server" };
+    const { data: user, meta } = parsed.data;
     return redirect(
         user.email_verified
             ? "/workspaces"
-            : body.meta.verification_email_sent
+            : meta.verification_email_sent
               ? "/verify-email"
               : "/verify-email?delivery=failed",
     );

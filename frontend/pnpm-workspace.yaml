@@ -1,4 +1,5 @@
 allowBuilds:
+  esbuild: true
   # Node-based mocking does not need MSW's browser service-worker generator.
   msw: false
 minimumReleaseAgeStrict: true

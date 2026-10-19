@@ -1,7 +1,8 @@
 import { emailField } from "~/components/forms/email-field";
+import type { ForgotPasswordRequest } from "~/generated/api/models";
+import { RequestPasswordReset202Response } from "~/generated/api/operations";
 import { guestLoader } from "~/features/authentication/session";
 import {
-    isRecord,
     rateLimit,
     requiredFields,
     responseBody,
@@ -26,7 +27,7 @@ export async function requestPasswordReset(
     const email = values.email?.trim();
 
     const response = await sessionRequest(request, "/api/forgot-password", {
-        values,
+        values: { email: values.email ?? "" } satisfies ForgotPasswordRequest,
     });
     if (!(response instanceof Response)) return response;
     if (response.status === 429) return rateLimit(response);
@@ -43,9 +44,7 @@ export async function requestPasswordReset(
     }
     if (
         response.status === 202 &&
-        isRecord(body) &&
-        typeof body.message === "string" &&
-        body.message.trim() &&
+        RequestPasswordReset202Response.safeParse(body).success &&
         email
     )
         return { status: "accepted", email };

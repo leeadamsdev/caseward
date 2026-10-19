@@ -90,7 +90,7 @@ for (const sent of [true, false]) {
                 "test=token",
             );
             expect(route.request().postDataJSON()).toEqual({
-                account_id: "7",
+                account_id: 7,
                 email: "ALEX@EXAMPLE.COM",
             });
             await response;
@@ -238,7 +238,7 @@ test("recovers from an account switch without applying the stale form to the new
         .fill(corrected.email);
     await page.route(endpoint, async (route) => {
         expect(route.request().postDataJSON()).toEqual({
-            account_id: "7",
+            account_id: 7,
             email: corrected.email,
         });
         await mockSignedInSession(page, other);

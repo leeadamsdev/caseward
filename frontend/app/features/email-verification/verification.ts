@@ -1,7 +1,10 @@
 import { redirect } from "react-router";
+import {
+    ResendVerificationEmail503Response,
+    VerifyEmail403Response,
+} from "~/generated/api/operations";
 import { loadSession, signOut } from "~/features/authentication/session";
 import {
-    isRecord,
     rateLimit,
     responseBody,
     sessionRequest,
@@ -52,10 +55,13 @@ export async function waitingAction({
     if (response.status === 419) return { status: "error", reason: "expired" };
     if (response.status === 429) return rateLimit(response);
     const body = await responseBody(response);
+    const failure = ResendVerificationEmail503Response.pick({
+        code: true,
+    }).safeParse(body);
     if (
         response.status === 503 &&
-        isRecord(body) &&
-        body.code === "verification_email_unavailable"
+        failure.success &&
+        failure.data.code === "verification_email_unavailable"
     )
         return {
             status: "error",
@@ -101,14 +107,18 @@ export async function verifyEmail({
     if (response.status === 419) return { status: "error", reason: "expired" };
     if (response.status === 429) return rateLimit(response);
     if (response.status === 403) {
-        const body = await responseBody(response);
-        if (isRecord(body)) {
-            if (body.code === "invalid_verification_link")
-                return { status: "invalid" };
-            if (body.code === "verification_account_mismatch")
-                return { status: "account-mismatch" };
-            if (body.code === "verification_email_mismatch")
-                return { status: "email-mismatch" };
+        const parsed = VerifyEmail403Response.pick({ code: true }).safeParse(
+            await responseBody(response),
+        );
+        if (parsed.success) {
+            switch (parsed.data.code) {
+                case "invalid_verification_link":
+                    return { status: "invalid" };
+                case "verification_account_mismatch":
+                    return { status: "account-mismatch" };
+                case "verification_email_mismatch":
+                    return { status: "email-mismatch" };
+            }
         }
     }
     return { status: "error", reason: "server" };

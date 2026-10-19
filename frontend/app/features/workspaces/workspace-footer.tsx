@@ -1,4 +1,4 @@
-import type { User } from "~/features/authentication/session";
+import type { UserResource as User } from "~/generated/api/models";
 import { SignOutForm } from "~/features/authentication/sign-out-form";
 
 export function WorkspaceFooter({

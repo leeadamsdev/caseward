@@ -162,7 +162,10 @@ test("focuses an accessible screen when the server rejects the reset link", asyn
     await page.route(endpoint, (route) =>
         route.fulfill({
             status: 422,
-            json: { code: "invalid_password_reset_link" },
+            json: {
+                message: "This password reset link is invalid or has expired.",
+                code: "invalid_password_reset_link",
+            },
         }),
     );
     await page.goto(path);
@@ -223,7 +226,10 @@ test("clears stale form feedback and passwords when another reset link is opened
     await page.route(endpoint, (route) =>
         route.fulfill({
             status: 422,
-            json: { code: "invalid_password_reset_link" },
+            json: {
+                message: "This password reset link is invalid or has expired.",
+                code: "invalid_password_reset_link",
+            },
         }),
     );
     await page.goto(path);

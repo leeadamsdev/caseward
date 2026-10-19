@@ -1,4 +1,5 @@
 import { redirect } from "react-router";
+import type { LoginRequest } from "~/generated/api/models";
 import { emailField } from "~/components/forms/email-field";
 import { verificationPath } from "~/features/email-verification/links";
 import {
@@ -33,7 +34,11 @@ export async function signIn(
     const { values, errors } = requiredFields(formData, loginFields);
     if (Object.keys(errors).length > 0) return { status: "validation", errors };
     const response = await sessionRequest(request, "/api/login", {
-        values: { ...values, remember: formData.get("remember") === "on" },
+        values: {
+            email: values.email ?? "",
+            password: values.password ?? "",
+            remember: formData.get("remember") === "on",
+        } satisfies LoginRequest,
     });
     if (!(response instanceof Response)) return response;
     if (response.status === 204)

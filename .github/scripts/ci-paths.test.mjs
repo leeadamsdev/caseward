@@ -57,6 +57,11 @@ test("unrelated and empty changes do not select application jobs", () => {
     });
 });
 test("combined changes and future Docker services are covered", () => {
+    assert.deepEqual(affectedJobs(["backend/openapi.json"]), {
+        backend: true,
+        frontend: true,
+        integration: true,
+    });
     assert.deepEqual(
         affectedJobs(["backend/composer.lock", "frontend/pnpm-lock.yaml"]),
         { backend: true, frontend: true, integration: true },

@@ -36,7 +36,10 @@ test("loads a bounded requested page and ignores server-supplied navigation URLs
             pages.push(page ?? "missing");
             return HttpResponse.json({
                 ...workspacePage(items, Number(page)),
-                links: { next: "https://attacker.example" },
+                links: {
+                    ...workspacePage(items, Number(page)).links,
+                    next: "https://attacker.example",
+                },
             });
         }),
     );
@@ -91,6 +94,30 @@ test("redirects a genuinely empty list to creation but permits creating another 
     });
 });
 
+test("uses the server page size when checking pagination consistency", async () => {
+    const items = [
+        workspace,
+        { ...workspace, id: workspaceId(2) },
+        { ...workspace, id: workspaceId(3) },
+    ];
+    const body = workspacePage(items);
+    server.use(
+        http.get(endpoint, () =>
+            HttpResponse.json({
+                ...body,
+                data: items.slice(0, 2),
+                meta: { ...body.meta, per_page: 2, last_page: 2, to: 2 },
+            }),
+        ),
+    );
+    expect(await workspacesLoader({ request: request() })).toMatchObject({
+        workspaces: {
+            status: "loaded",
+            page: { items: items.slice(0, 2), lastPage: 2, total: 3 },
+        },
+    });
+});
+
 const valid = workspacePage([workspace]);
 test.each([
     {
@@ -110,6 +137,15 @@ test.each([
     {
         name: "missing envelope",
         response: () => HttpResponse.json({}),
+        reason: "server",
+    },
+    {
+        name: "incomplete pagination metadata",
+        response: () =>
+            HttpResponse.json({
+                ...valid,
+                meta: { current_page: 1, last_page: 1, total: 1 },
+            }),
         reason: "server",
     },
     {
@@ -134,6 +170,7 @@ test.each([
         name: "duplicate workspace",
         response: () =>
             HttpResponse.json({
+                ...valid,
                 data: [workspace, workspace],
                 meta: { ...valid.meta, total: 2 },
             }),
@@ -172,11 +209,17 @@ test.each([
         name: "oversized page",
         response: () =>
             HttpResponse.json({
+                ...valid,
                 data: Array.from({ length: 26 }, (_, index) => ({
                     ...workspace,
                     id: workspaceId(index + 1),
                 })),
-                meta: { current_page: 1, last_page: 2, total: 26 },
+                meta: {
+                    ...valid.meta,
+                    current_page: 1,
+                    last_page: 2,
+                    total: 26,
+                },
             }),
         reason: "server",
     },

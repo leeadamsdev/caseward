@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Contracts;
 
+use App\Enums\WorkspaceRole;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
@@ -58,6 +59,24 @@ class ApiResponsesTest extends TestCase
         $this->check($this->browserRequest('POST', '/api/workspaces', ['account_id' => $user->id + 1, 'name' => 'Acme'])->assertConflict(), 'POST', '/api/workspaces');
         $this->check($this->browserRequest('POST', '/api/logout')->assertNoContent(), 'POST', '/api/logout');
         $this->check($this->browserRequest('POST', '/api/login', UserFixture::credentials())->assertNoContent(), 'POST', '/api/login');
+    }
+
+    public function test_workspace_member_lists_and_access_failures_match_the_contract(): void
+    {
+        $owner = $this->user();
+        $member = $this->user();
+        $workspace = $this->workspace($owner);
+        $workspace->users()->attach($member, ['role' => WorkspaceRole::Member]);
+        $path = "/api/workspaces/{$workspace->id}/members";
+        $contractPath = '/api/workspaces/{workspace}/members';
+        $this->check($this->browserRequest('GET', $path)->assertUnauthorized(), 'GET', $contractPath);
+        $this->signIn($this->user(verified: false));
+        $this->check($this->browserRequest('GET', $path)->assertForbidden(), 'GET', $contractPath);
+        $this->signIn($member);
+        $this->check($this->browserRequest('GET', $path)->assertOk()->assertHeader('Cache-Control', 'no-store, private'), 'GET', $contractPath);
+        $this->check($this->browserRequest('GET', "{$path}?page=2")->assertOk()->assertJsonPath('data', []), 'GET', $contractPath);
+        $workspace->users()->detach($member);
+        $this->check($this->browserRequest('GET', $path)->assertNotFound(), 'GET', $contractPath);
     }
 
     public function test_corrected_email_metadata_and_verification_delivery_responses_match(): void

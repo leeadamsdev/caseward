@@ -25,6 +25,7 @@ class CheckWorkerHealth extends Command
 
         try {
             Queue::connection('redis')->size('default');
+            Queue::getPausedQueues('redis', ['default']);
         } catch (Throwable) {
             $this->error('Queue is unavailable.');
 

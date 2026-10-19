@@ -64,6 +64,13 @@ class AuthServiceProvider extends ServiceProvider
         });
 
         $this->callAfterResolving(RateLimiter::class, function (RateLimiter $limiter): void {
+            $limiter->for('workspace-invitations', function (Request $request): array {
+                $user = $request->user();
+                abort_unless($user instanceof User, 401);
+
+                return [Limit::perMinute(10)->by("minute:{$user->id}"), Limit::perHour(50)->by("hour:{$user->id}")];
+            });
+
             $limiter->for('login', function (Request $request): array {
                 $limits = [Limit::perMinute(5)->by("ip:{$request->ip()}")];
                 $emailHash = $this->emailKey($request);

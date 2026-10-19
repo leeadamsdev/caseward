@@ -107,5 +107,6 @@ class WorkspaceAccessTest extends TestCase
         yield 'create' => ['POST', '/api/workspaces'];
         yield 'list' => ['GET', '/api/workspaces'];
         yield 'show' => ['GET', '/api/workspaces/{id}'];
+        yield 'members' => ['GET', '/api/workspaces/{id}/members'];
     }
 }

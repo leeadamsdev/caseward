@@ -64,6 +64,15 @@ class WorkerHealthTest extends TestCase
         $this->checkHealth()->expectsOutput('Queue is unavailable.')->assertFailed();
     }
 
+    public function test_a_fresh_heartbeat_does_not_mask_an_unreadable_worker_pause_state(): void
+    {
+        $this->heartbeat->beat();
+        Queue::shouldReceive('connection')->with('redis')->once()->andReturnSelf();
+        Queue::shouldReceive('size')->with('default')->once()->andReturn(0);
+        Queue::shouldReceive('getPausedQueues')->with('redis', ['default'])->once()->andThrow(new RuntimeException('Private cache details.'));
+        $this->checkHealth()->expectsOutput('Queue is unavailable.')->assertFailed();
+    }
+
     public function test_independent_worker_heartbeats_do_not_mask_each_other(): void
     {
         $other = new WorkerHeartbeat($this->path.'-other');

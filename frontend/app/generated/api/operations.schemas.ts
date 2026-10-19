@@ -25,6 +25,20 @@ export type AuthorizationExceptionOutput = zod.output<
     typeof AuthorizationException
 >;
 
+export const createWorkspaceInvitationRequestEmailMax = 254;
+
+export const CreateWorkspaceInvitationRequest = zod.object({
+    account_id: zod.int().min(1),
+    email: zod.email().max(createWorkspaceInvitationRequestEmailMax),
+});
+
+export type CreateWorkspaceInvitationRequest = zod.input<
+    typeof CreateWorkspaceInvitationRequest
+>;
+export type CreateWorkspaceInvitationRequestOutput = zod.output<
+    typeof CreateWorkspaceInvitationRequest
+>;
+
 export const createWorkspaceRequestNameMax = 100;
 
 export const CreateWorkspaceRequest = zod.object({
@@ -162,10 +176,64 @@ export const ValidationException = zod.object({
 export type ValidationException = zod.input<typeof ValidationException>;
 export type ValidationExceptionOutput = zod.output<typeof ValidationException>;
 
+export const WorkspaceInvitationPreviewResource = zod.object({
+    workspace: zod.object({
+        id: zod.string(),
+        name: zod.string(),
+    }),
+    email: zod.string(),
+    expires_at: zod.string(),
+    accepted: zod.boolean(),
+});
+
+export type WorkspaceInvitationPreviewResource = zod.input<
+    typeof WorkspaceInvitationPreviewResource
+>;
+export type WorkspaceInvitationPreviewResourceOutput = zod.output<
+    typeof WorkspaceInvitationPreviewResource
+>;
+
+export const WorkspaceInvitationRequest = zod.object({
+    account_id: zod.int().min(1),
+});
+
+export type WorkspaceInvitationRequest = zod.input<
+    typeof WorkspaceInvitationRequest
+>;
+export type WorkspaceInvitationRequestOutput = zod.output<
+    typeof WorkspaceInvitationRequest
+>;
+
+export const WorkspaceInvitationResource = zod.object({
+    id: zod.string(),
+    email: zod.string(),
+    expires_at: zod.string(),
+    last_queued_at: zod.string().nullable(),
+});
+
+export type WorkspaceInvitationResource = zod.input<
+    typeof WorkspaceInvitationResource
+>;
+export type WorkspaceInvitationResourceOutput = zod.output<
+    typeof WorkspaceInvitationResource
+>;
+
 export const WorkspaceRole = zod.enum(["owner", "member"]);
 
 export type WorkspaceRole = zod.input<typeof WorkspaceRole>;
 export type WorkspaceRoleOutput = zod.output<typeof WorkspaceRole>;
+
+export const WorkspaceMemberResource = zod.object({
+    id: zod.int(),
+    name: zod.string(),
+    email: zod.string(),
+    role: WorkspaceRole,
+});
+
+export type WorkspaceMemberResource = zod.input<typeof WorkspaceMemberResource>;
+export type WorkspaceMemberResourceOutput = zod.output<
+    typeof WorkspaceMemberResource
+>;
 
 export const workspaceResourceIdRegExp = new RegExp(
     "^[0-7][0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{25}$",

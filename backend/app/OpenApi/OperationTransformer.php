@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\OpenApi;
 
 use Dedoc\Scramble\Contracts\OperationTransformer as Transformer;
+use Dedoc\Scramble\Support\Generator\Combined\AnyOf;
 use Dedoc\Scramble\Support\Generator\Header;
 use Dedoc\Scramble\Support\Generator\Operation;
 use Dedoc\Scramble\Support\Generator\Reference;
@@ -34,7 +35,28 @@ class OperationTransformer implements Transformer
         $operation->security = $security === [] ? [] : [new SecurityRequirement($security)];
 
         if (in_array('verified', $middleware, true)) {
-            $operation->addResponse($this->error(403, 'Email verification required.', 'email_unverified'));
+            $forbidden = $this->error(403, 'Email verification or operation permission required.', 'email_unverified');
+            foreach ($operation->responses ?? [] as $response) {
+                $response = $response instanceof Reference ? $response->resolve() : $response;
+                if (! $response instanceof Response || $response->code !== 403) {
+                    continue;
+                }
+                $content = $response->getContent('application/json');
+                $base = $forbidden->getContent('application/json');
+                if ($content instanceof Schema && $content->type instanceof ObjectType
+                    && $base instanceof Schema && $base->type instanceof ObjectType) {
+                    $code = $content->type->properties['code'] ?? null;
+                    if ($code instanceof Type) {
+                        $codes = new AnyOf;
+                        $codes->setItems([$base->type->properties['code'], $code]);
+                        $base->type->properties['code'] = $codes;
+                    }
+                    if (! in_array('code', $content->type->required, true)) {
+                        $base->type->required = ['message'];
+                    }
+                }
+            }
+            $operation->addResponse($forbidden);
         }
 
         if (array_any($middleware, fn (mixed $name): bool => is_string($name) && str_starts_with($name, 'throttle:'))) {

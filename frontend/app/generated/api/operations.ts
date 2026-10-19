@@ -10,6 +10,7 @@ import * as zod from "zod";
 import {
     AuthenticationException,
     AuthorizationException,
+    CreateWorkspaceInvitationRequest,
     CreateWorkspaceRequest,
     ForgotPasswordRequest,
     LoginRequest,
@@ -19,6 +20,10 @@ import {
     UpdateEmailRequest,
     UserResource,
     ValidationException,
+    WorkspaceInvitationPreviewResource,
+    WorkspaceInvitationRequest,
+    WorkspaceInvitationResource,
+    WorkspaceMemberResource,
     WorkspaceResource,
 } from "./operations.schemas.ts";
 
@@ -866,4 +871,849 @@ export const GetWorkspace503Response = zod.object({
 export type GetWorkspace503Response = zod.input<typeof GetWorkspace503Response>;
 export type GetWorkspace503ResponseOutput = zod.output<
     typeof GetWorkspace503Response
+>;
+
+/**
+ * Owner-only, 25 per page, ordered by email then ID. Includes expired invitations so they can be resent; excludes accepted and revoked invitations.
+ * @summary List outstanding workspace invitations
+ */
+export const ListWorkspaceInvitationsParams = zod.object({
+    workspace: zod.string(),
+});
+
+export type ListWorkspaceInvitationsParams = zod.input<
+    typeof ListWorkspaceInvitationsParams
+>;
+export type ListWorkspaceInvitationsParamsOutput = zod.output<
+    typeof ListWorkspaceInvitationsParams
+>;
+
+export const listWorkspaceInvitationsQueryPageDefault = 1;
+
+export const ListWorkspaceInvitationsQueryParams = zod.object({
+    page: zod.int().default(listWorkspaceInvitationsQueryPageDefault),
+});
+
+export type ListWorkspaceInvitationsQueryParams = zod.input<
+    typeof ListWorkspaceInvitationsQueryParams
+>;
+export type ListWorkspaceInvitationsQueryParamsOutput = zod.output<
+    typeof ListWorkspaceInvitationsQueryParams
+>;
+
+export const listWorkspaceInvitations200ResponseMetaPerPageMin = 0;
+
+export const listWorkspaceInvitations200ResponseMetaTotalMin = 0;
+
+export const ListWorkspaceInvitations200Response = zod.object({
+    data: zod.array(WorkspaceInvitationResource),
+    links: zod.object({
+        first: zod.string().nullable(),
+        last: zod.string().nullable(),
+        prev: zod.string().nullable(),
+        next: zod.string().nullable(),
+    }),
+    meta: zod.object({
+        current_page: zod.int().min(1),
+        from: zod.int().min(1).nullable(),
+        last_page: zod.int().min(1),
+        links: zod
+            .array(
+                zod.object({
+                    url: zod.string().nullable(),
+                    label: zod.string(),
+                    active: zod.boolean(),
+                }),
+            )
+            .describe("Generated paginator links."),
+        path: zod
+            .string()
+            .nullable()
+            .describe("Base path for paginator generated URLs."),
+        per_page: zod
+            .int()
+            .min(listWorkspaceInvitations200ResponseMetaPerPageMin)
+            .describe("Number of items shown per page."),
+        to: zod
+            .int()
+            .min(1)
+            .nullable()
+            .describe("Number of the last item in the slice."),
+        total: zod
+            .int()
+            .min(listWorkspaceInvitations200ResponseMetaTotalMin)
+            .describe("Total number of items being paginated."),
+    }),
+});
+
+export type ListWorkspaceInvitations200Response = zod.input<
+    typeof ListWorkspaceInvitations200Response
+>;
+export type ListWorkspaceInvitations200ResponseOutput = zod.output<
+    typeof ListWorkspaceInvitations200Response
+>;
+
+export const ListWorkspaceInvitations401Response = AuthenticationException;
+
+export type ListWorkspaceInvitations401Response = zod.input<
+    typeof ListWorkspaceInvitations401Response
+>;
+export type ListWorkspaceInvitations401ResponseOutput = zod.output<
+    typeof ListWorkspaceInvitations401Response
+>;
+
+export const ListWorkspaceInvitations403Response = zod.object({
+    message: zod.string(),
+    code: zod.literal("email_unverified").exactOptional(),
+});
+
+export type ListWorkspaceInvitations403Response = zod.input<
+    typeof ListWorkspaceInvitations403Response
+>;
+export type ListWorkspaceInvitations403ResponseOutput = zod.output<
+    typeof ListWorkspaceInvitations403Response
+>;
+
+export const ListWorkspaceInvitations404Response = zod.object({
+    message: zod.string(),
+});
+
+export type ListWorkspaceInvitations404Response = zod.input<
+    typeof ListWorkspaceInvitations404Response
+>;
+export type ListWorkspaceInvitations404ResponseOutput = zod.output<
+    typeof ListWorkspaceInvitations404Response
+>;
+
+export const ListWorkspaceInvitations503Response = zod.object({
+    message: zod.string(),
+});
+
+export type ListWorkspaceInvitations503Response = zod.input<
+    typeof ListWorkspaceInvitations503Response
+>;
+export type ListWorkspaceInvitations503ResponseOutput = zod.output<
+    typeof ListWorkspaceInvitations503Response
+>;
+
+/**
+ * Owner-only. Queues an encrypted email with a seven-day link. Does not grant membership. A queue failure preserves the invitation for resend. Bind account_id to the account shown by the form.
+ * @summary Invite a workspace member
+ */
+export const CreateWorkspaceInvitationParams = zod.object({
+    workspace: zod.string(),
+});
+
+export type CreateWorkspaceInvitationParams = zod.input<
+    typeof CreateWorkspaceInvitationParams
+>;
+export type CreateWorkspaceInvitationParamsOutput = zod.output<
+    typeof CreateWorkspaceInvitationParams
+>;
+
+export const CreateWorkspaceInvitationBody = CreateWorkspaceInvitationRequest;
+
+export type CreateWorkspaceInvitationBody = zod.input<
+    typeof CreateWorkspaceInvitationBody
+>;
+export type CreateWorkspaceInvitationBodyOutput = zod.output<
+    typeof CreateWorkspaceInvitationBody
+>;
+
+export const CreateWorkspaceInvitation201Response = zod.object({
+    data: WorkspaceInvitationResource,
+});
+
+export type CreateWorkspaceInvitation201Response = zod.input<
+    typeof CreateWorkspaceInvitation201Response
+>;
+export type CreateWorkspaceInvitation201ResponseOutput = zod.output<
+    typeof CreateWorkspaceInvitation201Response
+>;
+
+export const CreateWorkspaceInvitation401Response = AuthenticationException;
+
+export type CreateWorkspaceInvitation401Response = zod.input<
+    typeof CreateWorkspaceInvitation401Response
+>;
+export type CreateWorkspaceInvitation401ResponseOutput = zod.output<
+    typeof CreateWorkspaceInvitation401Response
+>;
+
+export const CreateWorkspaceInvitation403Response = zod.object({
+    message: zod.string(),
+    code: zod.literal("email_unverified").exactOptional(),
+});
+
+export type CreateWorkspaceInvitation403Response = zod.input<
+    typeof CreateWorkspaceInvitation403Response
+>;
+export type CreateWorkspaceInvitation403ResponseOutput = zod.output<
+    typeof CreateWorkspaceInvitation403Response
+>;
+
+export const CreateWorkspaceInvitation404Response = zod.object({
+    message: zod.string(),
+});
+
+export type CreateWorkspaceInvitation404Response = zod.input<
+    typeof CreateWorkspaceInvitation404Response
+>;
+export type CreateWorkspaceInvitation404ResponseOutput = zod.output<
+    typeof CreateWorkspaceInvitation404Response
+>;
+
+export const CreateWorkspaceInvitation409Response = zod.object({
+    message: zod.string(),
+    code: zod.literal("account_context_changed"),
+});
+
+export type CreateWorkspaceInvitation409Response = zod.input<
+    typeof CreateWorkspaceInvitation409Response
+>;
+export type CreateWorkspaceInvitation409ResponseOutput = zod.output<
+    typeof CreateWorkspaceInvitation409Response
+>;
+
+export const CreateWorkspaceInvitation419Response = zod.object({
+    message: zod.string(),
+});
+
+export type CreateWorkspaceInvitation419Response = zod.input<
+    typeof CreateWorkspaceInvitation419Response
+>;
+export type CreateWorkspaceInvitation419ResponseOutput = zod.output<
+    typeof CreateWorkspaceInvitation419Response
+>;
+
+export const CreateWorkspaceInvitation422Response = ValidationException;
+
+export type CreateWorkspaceInvitation422Response = zod.input<
+    typeof CreateWorkspaceInvitation422Response
+>;
+export type CreateWorkspaceInvitation422ResponseOutput = zod.output<
+    typeof CreateWorkspaceInvitation422Response
+>;
+
+export const CreateWorkspaceInvitation429Response = zod.object({
+    message: zod.string(),
+});
+
+export type CreateWorkspaceInvitation429Response = zod.input<
+    typeof CreateWorkspaceInvitation429Response
+>;
+export type CreateWorkspaceInvitation429ResponseOutput = zod.output<
+    typeof CreateWorkspaceInvitation429Response
+>;
+
+export const CreateWorkspaceInvitation503Response = zod.object({
+    message: zod.string(),
+    code: zod.literal("invitation_queue_unavailable").exactOptional(),
+});
+
+export type CreateWorkspaceInvitation503Response = zod.input<
+    typeof CreateWorkspaceInvitation503Response
+>;
+export type CreateWorkspaceInvitation503ResponseOutput = zod.output<
+    typeof CreateWorkspaceInvitation503Response
+>;
+
+/**
+ * Owner-only. Rotates the token and renews the seven-day expiry. Shares a 60-second cooldown with creation, plus per-account request limits. Queue failures are immediately retryable.
+ * @summary Resend a workspace invitation
+ */
+export const ResendWorkspaceInvitationParams = zod.object({
+    workspace: zod.string(),
+    invitation: zod.string(),
+});
+
+export type ResendWorkspaceInvitationParams = zod.input<
+    typeof ResendWorkspaceInvitationParams
+>;
+export type ResendWorkspaceInvitationParamsOutput = zod.output<
+    typeof ResendWorkspaceInvitationParams
+>;
+
+export const ResendWorkspaceInvitationBody = WorkspaceInvitationRequest;
+
+export type ResendWorkspaceInvitationBody = zod.input<
+    typeof ResendWorkspaceInvitationBody
+>;
+export type ResendWorkspaceInvitationBodyOutput = zod.output<
+    typeof ResendWorkspaceInvitationBody
+>;
+
+export const ResendWorkspaceInvitation200Response = zod.object({
+    data: WorkspaceInvitationResource,
+});
+
+export type ResendWorkspaceInvitation200Response = zod.input<
+    typeof ResendWorkspaceInvitation200Response
+>;
+export type ResendWorkspaceInvitation200ResponseOutput = zod.output<
+    typeof ResendWorkspaceInvitation200Response
+>;
+
+export const ResendWorkspaceInvitation401Response = AuthenticationException;
+
+export type ResendWorkspaceInvitation401Response = zod.input<
+    typeof ResendWorkspaceInvitation401Response
+>;
+export type ResendWorkspaceInvitation401ResponseOutput = zod.output<
+    typeof ResendWorkspaceInvitation401Response
+>;
+
+export const ResendWorkspaceInvitation403Response = zod.object({
+    message: zod.string(),
+    code: zod.literal("email_unverified").exactOptional(),
+});
+
+export type ResendWorkspaceInvitation403Response = zod.input<
+    typeof ResendWorkspaceInvitation403Response
+>;
+export type ResendWorkspaceInvitation403ResponseOutput = zod.output<
+    typeof ResendWorkspaceInvitation403Response
+>;
+
+export const ResendWorkspaceInvitation404Response = zod.object({
+    message: zod.string(),
+});
+
+export type ResendWorkspaceInvitation404Response = zod.input<
+    typeof ResendWorkspaceInvitation404Response
+>;
+export type ResendWorkspaceInvitation404ResponseOutput = zod.output<
+    typeof ResendWorkspaceInvitation404Response
+>;
+
+export const ResendWorkspaceInvitation409Response = zod.object({
+    message: zod.string(),
+    code: zod.literal("account_context_changed"),
+});
+
+export type ResendWorkspaceInvitation409Response = zod.input<
+    typeof ResendWorkspaceInvitation409Response
+>;
+export type ResendWorkspaceInvitation409ResponseOutput = zod.output<
+    typeof ResendWorkspaceInvitation409Response
+>;
+
+export const ResendWorkspaceInvitation410Response = zod.object({
+    message: zod.string(),
+});
+
+export type ResendWorkspaceInvitation410Response = zod.input<
+    typeof ResendWorkspaceInvitation410Response
+>;
+export type ResendWorkspaceInvitation410ResponseOutput = zod.output<
+    typeof ResendWorkspaceInvitation410Response
+>;
+
+export const ResendWorkspaceInvitation419Response = zod.object({
+    message: zod.string(),
+});
+
+export type ResendWorkspaceInvitation419Response = zod.input<
+    typeof ResendWorkspaceInvitation419Response
+>;
+export type ResendWorkspaceInvitation419ResponseOutput = zod.output<
+    typeof ResendWorkspaceInvitation419Response
+>;
+
+export const ResendWorkspaceInvitation422Response = ValidationException;
+
+export type ResendWorkspaceInvitation422Response = zod.input<
+    typeof ResendWorkspaceInvitation422Response
+>;
+export type ResendWorkspaceInvitation422ResponseOutput = zod.output<
+    typeof ResendWorkspaceInvitation422Response
+>;
+
+export const ResendWorkspaceInvitation429Response = zod.object({
+    message: zod.string(),
+});
+
+export type ResendWorkspaceInvitation429Response = zod.input<
+    typeof ResendWorkspaceInvitation429Response
+>;
+export type ResendWorkspaceInvitation429ResponseOutput = zod.output<
+    typeof ResendWorkspaceInvitation429Response
+>;
+
+export const ResendWorkspaceInvitation503Response = zod.object({
+    message: zod.string(),
+    code: zod.literal("invitation_queue_unavailable").exactOptional(),
+});
+
+export type ResendWorkspaceInvitation503Response = zod.input<
+    typeof ResendWorkspaceInvitation503Response
+>;
+export type ResendWorkspaceInvitation503ResponseOutput = zod.output<
+    typeof ResendWorkspaceInvitation503Response
+>;
+
+/**
+ * Owner-only. Repeated revocation succeeds; accepted invitations return 410. Revoking never removes an existing membership.
+ * @summary Revoke a workspace invitation
+ */
+export const RevokeWorkspaceInvitationParams = zod.object({
+    workspace: zod.string(),
+    invitation: zod.string(),
+});
+
+export type RevokeWorkspaceInvitationParams = zod.input<
+    typeof RevokeWorkspaceInvitationParams
+>;
+export type RevokeWorkspaceInvitationParamsOutput = zod.output<
+    typeof RevokeWorkspaceInvitationParams
+>;
+
+export const RevokeWorkspaceInvitationQueryParams = zod.object({
+    account_id: zod.int().min(1),
+});
+
+export type RevokeWorkspaceInvitationQueryParams = zod.input<
+    typeof RevokeWorkspaceInvitationQueryParams
+>;
+export type RevokeWorkspaceInvitationQueryParamsOutput = zod.output<
+    typeof RevokeWorkspaceInvitationQueryParams
+>;
+
+export const RevokeWorkspaceInvitation204Response = zod.void();
+
+export type RevokeWorkspaceInvitation204Response = zod.input<
+    typeof RevokeWorkspaceInvitation204Response
+>;
+export type RevokeWorkspaceInvitation204ResponseOutput = zod.output<
+    typeof RevokeWorkspaceInvitation204Response
+>;
+
+export const RevokeWorkspaceInvitation401Response = AuthenticationException;
+
+export type RevokeWorkspaceInvitation401Response = zod.input<
+    typeof RevokeWorkspaceInvitation401Response
+>;
+export type RevokeWorkspaceInvitation401ResponseOutput = zod.output<
+    typeof RevokeWorkspaceInvitation401Response
+>;
+
+export const RevokeWorkspaceInvitation403Response = zod.object({
+    message: zod.string(),
+    code: zod.literal("email_unverified").exactOptional(),
+});
+
+export type RevokeWorkspaceInvitation403Response = zod.input<
+    typeof RevokeWorkspaceInvitation403Response
+>;
+export type RevokeWorkspaceInvitation403ResponseOutput = zod.output<
+    typeof RevokeWorkspaceInvitation403Response
+>;
+
+export const RevokeWorkspaceInvitation404Response = zod.object({
+    message: zod.string(),
+});
+
+export type RevokeWorkspaceInvitation404Response = zod.input<
+    typeof RevokeWorkspaceInvitation404Response
+>;
+export type RevokeWorkspaceInvitation404ResponseOutput = zod.output<
+    typeof RevokeWorkspaceInvitation404Response
+>;
+
+export const RevokeWorkspaceInvitation409Response = zod.object({
+    message: zod.string(),
+    code: zod.literal("account_context_changed"),
+});
+
+export type RevokeWorkspaceInvitation409Response = zod.input<
+    typeof RevokeWorkspaceInvitation409Response
+>;
+export type RevokeWorkspaceInvitation409ResponseOutput = zod.output<
+    typeof RevokeWorkspaceInvitation409Response
+>;
+
+export const RevokeWorkspaceInvitation410Response = zod.object({
+    message: zod.string(),
+});
+
+export type RevokeWorkspaceInvitation410Response = zod.input<
+    typeof RevokeWorkspaceInvitation410Response
+>;
+export type RevokeWorkspaceInvitation410ResponseOutput = zod.output<
+    typeof RevokeWorkspaceInvitation410Response
+>;
+
+export const RevokeWorkspaceInvitation419Response = zod.object({
+    message: zod.string(),
+});
+
+export type RevokeWorkspaceInvitation419Response = zod.input<
+    typeof RevokeWorkspaceInvitation419Response
+>;
+export type RevokeWorkspaceInvitation419ResponseOutput = zod.output<
+    typeof RevokeWorkspaceInvitation419Response
+>;
+
+export const RevokeWorkspaceInvitation422Response = ValidationException;
+
+export type RevokeWorkspaceInvitation422Response = zod.input<
+    typeof RevokeWorkspaceInvitation422Response
+>;
+export type RevokeWorkspaceInvitation422ResponseOutput = zod.output<
+    typeof RevokeWorkspaceInvitation422Response
+>;
+
+export const RevokeWorkspaceInvitation429Response = zod.object({
+    message: zod.string(),
+});
+
+export type RevokeWorkspaceInvitation429Response = zod.input<
+    typeof RevokeWorkspaceInvitation429Response
+>;
+export type RevokeWorkspaceInvitation429ResponseOutput = zod.output<
+    typeof RevokeWorkspaceInvitation429Response
+>;
+
+export const RevokeWorkspaceInvitation503Response = zod.object({
+    message: zod.string(),
+});
+
+export type RevokeWorkspaceInvitation503Response = zod.input<
+    typeof RevokeWorkspaceInvitation503Response
+>;
+export type RevokeWorkspaceInvitation503ResponseOutput = zod.output<
+    typeof RevokeWorkspaceInvitation503Response
+>;
+
+/**
+ * Requires the verified invited email. Does not create a membership or consume the token. Invalid, rotated, revoked and expired tokens return 410.
+ * @summary Preview an invitation
+ */
+export const GetWorkspaceInvitationParams = zod.object({
+    token: zod.string(),
+});
+
+export type GetWorkspaceInvitationParams = zod.input<
+    typeof GetWorkspaceInvitationParams
+>;
+export type GetWorkspaceInvitationParamsOutput = zod.output<
+    typeof GetWorkspaceInvitationParams
+>;
+
+export const GetWorkspaceInvitation200Response = zod.object({
+    data: WorkspaceInvitationPreviewResource,
+});
+
+export type GetWorkspaceInvitation200Response = zod.input<
+    typeof GetWorkspaceInvitation200Response
+>;
+export type GetWorkspaceInvitation200ResponseOutput = zod.output<
+    typeof GetWorkspaceInvitation200Response
+>;
+
+export const GetWorkspaceInvitation401Response = AuthenticationException;
+
+export type GetWorkspaceInvitation401Response = zod.input<
+    typeof GetWorkspaceInvitation401Response
+>;
+export type GetWorkspaceInvitation401ResponseOutput = zod.output<
+    typeof GetWorkspaceInvitation401Response
+>;
+
+export const GetWorkspaceInvitation403Response = zod.object({
+    message: zod.string(),
+    code: zod.union([
+        zod.literal("email_unverified"),
+        zod.literal("invitation_account_mismatch"),
+    ]),
+});
+
+export type GetWorkspaceInvitation403Response = zod.input<
+    typeof GetWorkspaceInvitation403Response
+>;
+export type GetWorkspaceInvitation403ResponseOutput = zod.output<
+    typeof GetWorkspaceInvitation403Response
+>;
+
+export const GetWorkspaceInvitation410Response = zod.object({
+    message: zod.string(),
+});
+
+export type GetWorkspaceInvitation410Response = zod.input<
+    typeof GetWorkspaceInvitation410Response
+>;
+export type GetWorkspaceInvitation410ResponseOutput = zod.output<
+    typeof GetWorkspaceInvitation410Response
+>;
+
+export const GetWorkspaceInvitation429Response = zod.object({
+    message: zod.string(),
+});
+
+export type GetWorkspaceInvitation429Response = zod.input<
+    typeof GetWorkspaceInvitation429Response
+>;
+export type GetWorkspaceInvitation429ResponseOutput = zod.output<
+    typeof GetWorkspaceInvitation429Response
+>;
+
+export const GetWorkspaceInvitation503Response = zod.object({
+    message: zod.string(),
+});
+
+export type GetWorkspaceInvitation503Response = zod.input<
+    typeof GetWorkspaceInvitation503Response
+>;
+export type GetWorkspaceInvitation503ResponseOutput = zod.output<
+    typeof GetWorkspaceInvitation503Response
+>;
+
+/**
+ * Requires the verified invited email and explicit confirmation. Creates a member membership atomically; safe to repeat while membership remains. Never restores membership removed after acceptance. Bind account_id to the account shown by the form.
+ * @summary Accept a workspace invitation
+ */
+export const AcceptWorkspaceInvitationParams = zod.object({
+    token: zod.string(),
+});
+
+export type AcceptWorkspaceInvitationParams = zod.input<
+    typeof AcceptWorkspaceInvitationParams
+>;
+export type AcceptWorkspaceInvitationParamsOutput = zod.output<
+    typeof AcceptWorkspaceInvitationParams
+>;
+
+export const AcceptWorkspaceInvitationBody = WorkspaceInvitationRequest;
+
+export type AcceptWorkspaceInvitationBody = zod.input<
+    typeof AcceptWorkspaceInvitationBody
+>;
+export type AcceptWorkspaceInvitationBodyOutput = zod.output<
+    typeof AcceptWorkspaceInvitationBody
+>;
+
+export const AcceptWorkspaceInvitation200Response = zod.object({
+    data: WorkspaceResource,
+});
+
+export type AcceptWorkspaceInvitation200Response = zod.input<
+    typeof AcceptWorkspaceInvitation200Response
+>;
+export type AcceptWorkspaceInvitation200ResponseOutput = zod.output<
+    typeof AcceptWorkspaceInvitation200Response
+>;
+
+export const AcceptWorkspaceInvitation401Response = AuthenticationException;
+
+export type AcceptWorkspaceInvitation401Response = zod.input<
+    typeof AcceptWorkspaceInvitation401Response
+>;
+export type AcceptWorkspaceInvitation401ResponseOutput = zod.output<
+    typeof AcceptWorkspaceInvitation401Response
+>;
+
+export const AcceptWorkspaceInvitation403Response = zod.object({
+    message: zod.string(),
+    code: zod.union([
+        zod.literal("email_unverified"),
+        zod.literal("invitation_account_mismatch"),
+    ]),
+});
+
+export type AcceptWorkspaceInvitation403Response = zod.input<
+    typeof AcceptWorkspaceInvitation403Response
+>;
+export type AcceptWorkspaceInvitation403ResponseOutput = zod.output<
+    typeof AcceptWorkspaceInvitation403Response
+>;
+
+export const AcceptWorkspaceInvitation409Response = zod.object({
+    message: zod.string(),
+    code: zod.literal("account_context_changed"),
+});
+
+export type AcceptWorkspaceInvitation409Response = zod.input<
+    typeof AcceptWorkspaceInvitation409Response
+>;
+export type AcceptWorkspaceInvitation409ResponseOutput = zod.output<
+    typeof AcceptWorkspaceInvitation409Response
+>;
+
+export const AcceptWorkspaceInvitation410Response = zod.object({
+    message: zod.string(),
+});
+
+export type AcceptWorkspaceInvitation410Response = zod.input<
+    typeof AcceptWorkspaceInvitation410Response
+>;
+export type AcceptWorkspaceInvitation410ResponseOutput = zod.output<
+    typeof AcceptWorkspaceInvitation410Response
+>;
+
+export const AcceptWorkspaceInvitation419Response = zod.object({
+    message: zod.string(),
+});
+
+export type AcceptWorkspaceInvitation419Response = zod.input<
+    typeof AcceptWorkspaceInvitation419Response
+>;
+export type AcceptWorkspaceInvitation419ResponseOutput = zod.output<
+    typeof AcceptWorkspaceInvitation419Response
+>;
+
+export const AcceptWorkspaceInvitation422Response = ValidationException;
+
+export type AcceptWorkspaceInvitation422Response = zod.input<
+    typeof AcceptWorkspaceInvitation422Response
+>;
+export type AcceptWorkspaceInvitation422ResponseOutput = zod.output<
+    typeof AcceptWorkspaceInvitation422Response
+>;
+
+export const AcceptWorkspaceInvitation429Response = zod.object({
+    message: zod.string(),
+});
+
+export type AcceptWorkspaceInvitation429Response = zod.input<
+    typeof AcceptWorkspaceInvitation429Response
+>;
+export type AcceptWorkspaceInvitation429ResponseOutput = zod.output<
+    typeof AcceptWorkspaceInvitation429Response
+>;
+
+export const AcceptWorkspaceInvitation503Response = zod.object({
+    message: zod.string(),
+});
+
+export type AcceptWorkspaceInvitation503Response = zod.input<
+    typeof AcceptWorkspaceInvitation503Response
+>;
+export type AcceptWorkspaceInvitation503ResponseOutput = zod.output<
+    typeof AcceptWorkspaceInvitation503Response
+>;
+
+/**
+ * Owners and members can list colleagues in their workspace, ordered by name then account ID, with 25 results per page. Roles apply to this workspace. Unknown workspaces and workspaces without membership both return the same 404 response.
+ * @summary List workspace members
+ */
+export const ListWorkspaceMembersParams = zod.object({
+    workspace: zod.string(),
+});
+
+export type ListWorkspaceMembersParams = zod.input<
+    typeof ListWorkspaceMembersParams
+>;
+export type ListWorkspaceMembersParamsOutput = zod.output<
+    typeof ListWorkspaceMembersParams
+>;
+
+export const listWorkspaceMembersQueryPageDefault = 1;
+
+export const ListWorkspaceMembersQueryParams = zod.object({
+    page: zod
+        .int()
+        .default(listWorkspaceMembersQueryPageDefault)
+        .describe("Page number, starting at one."),
+});
+
+export type ListWorkspaceMembersQueryParams = zod.input<
+    typeof ListWorkspaceMembersQueryParams
+>;
+export type ListWorkspaceMembersQueryParamsOutput = zod.output<
+    typeof ListWorkspaceMembersQueryParams
+>;
+
+export const listWorkspaceMembers200ResponseMetaPerPageMin = 0;
+
+export const listWorkspaceMembers200ResponseMetaTotalMin = 0;
+
+export const ListWorkspaceMembers200Response = zod.object({
+    data: zod.array(WorkspaceMemberResource),
+    links: zod.object({
+        first: zod.string().nullable(),
+        last: zod.string().nullable(),
+        prev: zod.string().nullable(),
+        next: zod.string().nullable(),
+    }),
+    meta: zod.object({
+        current_page: zod.int().min(1),
+        from: zod.int().min(1).nullable(),
+        last_page: zod.int().min(1),
+        links: zod
+            .array(
+                zod.object({
+                    url: zod.string().nullable(),
+                    label: zod.string(),
+                    active: zod.boolean(),
+                }),
+            )
+            .describe("Generated paginator links."),
+        path: zod
+            .string()
+            .nullable()
+            .describe("Base path for paginator generated URLs."),
+        per_page: zod
+            .int()
+            .min(listWorkspaceMembers200ResponseMetaPerPageMin)
+            .describe("Number of items shown per page."),
+        to: zod
+            .int()
+            .min(1)
+            .nullable()
+            .describe("Number of the last item in the slice."),
+        total: zod
+            .int()
+            .min(listWorkspaceMembers200ResponseMetaTotalMin)
+            .describe("Total number of items being paginated."),
+    }),
+});
+
+export type ListWorkspaceMembers200Response = zod.input<
+    typeof ListWorkspaceMembers200Response
+>;
+export type ListWorkspaceMembers200ResponseOutput = zod.output<
+    typeof ListWorkspaceMembers200Response
+>;
+
+export const ListWorkspaceMembers401Response = AuthenticationException;
+
+export type ListWorkspaceMembers401Response = zod.input<
+    typeof ListWorkspaceMembers401Response
+>;
+export type ListWorkspaceMembers401ResponseOutput = zod.output<
+    typeof ListWorkspaceMembers401Response
+>;
+
+export const ListWorkspaceMembers403Response = zod.object({
+    message: zod.string(),
+    code: zod.literal("email_unverified").exactOptional(),
+});
+
+export type ListWorkspaceMembers403Response = zod.input<
+    typeof ListWorkspaceMembers403Response
+>;
+export type ListWorkspaceMembers403ResponseOutput = zod.output<
+    typeof ListWorkspaceMembers403Response
+>;
+
+export const ListWorkspaceMembers404Response = zod.object({
+    message: zod.string(),
+});
+
+export type ListWorkspaceMembers404Response = zod.input<
+    typeof ListWorkspaceMembers404Response
+>;
+export type ListWorkspaceMembers404ResponseOutput = zod.output<
+    typeof ListWorkspaceMembers404Response
+>;
+
+export const ListWorkspaceMembers503Response = zod.object({
+    message: zod.string(),
+});
+
+export type ListWorkspaceMembers503Response = zod.input<
+    typeof ListWorkspaceMembers503Response
+>;
+export type ListWorkspaceMembers503ResponseOutput = zod.output<
+    typeof ListWorkspaceMembers503Response
 >;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\EmailVerification;
 
 use App\Http\Requests\UpdateEmailRequest;
-use Illuminate\Auth\Notifications\VerifyEmail;
+use App\Notifications\VerificationNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -81,15 +81,15 @@ class EmailCorrectionTest extends TestCase
             'password' => 'a different long passphrase',
             'email_verified_at' => now()->toIso8601String(),
         ])->assertOk()->assertJsonPath('data.email', 'corrected@example.com')
-            ->assertJsonPath('data.email_verified', false)->assertJsonPath('meta.verification_email_sent', true);
+            ->assertJsonPath('data.email_verified', false)->assertJsonPath('meta.verification_email_queued', true);
 
         $this->assertSame($password, $user->refresh()->password);
         $this->assertSame('Alex Example', $user->name);
         $this->assertDatabaseCount('users', 1);
         $this->browserRequest('POST', $oldLink)->assertForbidden();
         $this->assertFalse($user->refresh()->hasVerifiedEmail());
-        $notification = Notification::sent($user, VerifyEmail::class)->sole();
-        $this->assertInstanceOf(VerifyEmail::class, $notification);
+        $notification = Notification::sent($user, VerificationNotification::class)->sole();
+        $this->assertInstanceOf(VerificationNotification::class, $notification);
         $link = $notification->toMail($user)->actionUrl;
         $this->browserRequest('POST', $this->apiLink($link))->assertNoContent();
         $this->assertTrue($user->refresh()->hasVerifiedEmail());
@@ -136,7 +136,7 @@ class EmailCorrectionTest extends TestCase
         $this->assertSame('alex@example.com', $user->refresh()->email);
         Notification::assertNothingSent();
         $this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, 'email' => 'available@example.com'])->assertOk();
-        Notification::assertSentToTimes($user, VerifyEmail::class, 1);
+        Notification::assertSentToTimes($user, VerificationNotification::class, 1);
     }
 
     public function test_address_correction_rechecks_verification_after_validation(): void

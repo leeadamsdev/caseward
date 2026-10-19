@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Notifications\VerificationNotification;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -27,6 +28,11 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $fillable = ['name', 'email', 'password'];
 
     protected $hidden = ['password'];
+
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new VerificationNotification($this->getEmailForVerification()));
+    }
 
     /** @return BelongsToMany<Workspace, $this, WorkspaceMembership, 'membership'> */
     public function workspaces(): BelongsToMany

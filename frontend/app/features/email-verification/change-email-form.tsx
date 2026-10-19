@@ -9,7 +9,7 @@ import { useFormFeedback } from "~/components/forms/use-form-feedback";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { Notice } from "~/components/ui/notice";
 import { CardHeading } from "~/components/layout/card-page";
-import type { UserResource as User } from "~/generated/api/models";
+import type { UserResource as User } from "~/generated/api/operations.schemas";
 import { emailFields, type ChangeEmailResult } from "./change-email";
 
 export function ChangeEmailForm({ user }: { user: User }) {

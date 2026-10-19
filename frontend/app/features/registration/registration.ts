@@ -11,7 +11,7 @@ import {
 } from "~/lib/api";
 import { userSchema } from "~/features/authentication/session";
 import { Register201Response } from "~/generated/api/operations";
-import type { RegisterRequest } from "~/generated/api/models";
+import type { RegisterRequest } from "~/generated/api/operations.schemas";
 
 const registrationSchema = Register201Response.extend({ data: userSchema });
 
@@ -72,8 +72,8 @@ export async function registerAccount(
     return redirect(
         user.email_verified
             ? "/workspaces"
-            : meta.verification_email_sent
+            : meta.verification_email_queued
               ? "/verify-email"
-              : "/verify-email?delivery=failed",
+              : "/verify-email?queue=failed",
     );
 }

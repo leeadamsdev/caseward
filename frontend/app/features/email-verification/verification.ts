@@ -1,5 +1,6 @@
 import { redirect } from "react-router";
 import {
+    ResendVerificationEmail202Response,
     ResendVerificationEmail503Response,
     VerifyEmail403Response,
 } from "~/generated/api/operations";
@@ -21,11 +22,11 @@ export type VerificationResult =
     | RateLimit;
 
 export type ResendResult =
-    | { status: "sent"; retry: RetryWindow }
+    | { status: "queued"; retry: RetryWindow }
     | RateLimit
     | {
           status: "error";
-          reason: ApiFailure["reason"] | "delivery";
+          reason: ApiFailure["reason"] | "queue";
           retry?: RetryWindow;
       };
 
@@ -43,8 +44,15 @@ export async function waitingAction({
         "/api/email/verification-notification",
     );
     if (!(response instanceof Response)) return response;
-    if (response.status === 204)
-        return { status: "sent", retry: retryWindow(response) };
+    if (response.status === 204) return redirect("/workspaces");
+    if (response.status === 202) {
+        const parsed = ResendVerificationEmail202Response.safeParse(
+            await responseBody(response),
+        );
+        return parsed.success
+            ? { status: "queued", retry: retryWindow(response) }
+            : { status: "error", reason: "server" };
+    }
     if (response.status === 401) {
         const value = data.get("returnTo");
         const path = verificationPath(typeof value === "string" ? value : null);
@@ -61,11 +69,11 @@ export async function waitingAction({
     if (
         response.status === 503 &&
         failure.success &&
-        failure.data.code === "verification_email_unavailable"
+        failure.data.code === "verification_queue_unavailable"
     )
         return {
             status: "error",
-            reason: "delivery",
+            reason: "queue",
             retry: retryWindow(response),
         };
     return { status: "error", reason: "server" };

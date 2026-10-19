@@ -4,11 +4,8 @@ export default {
         output: {
             client: "zod",
             target: "app/generated/api/operations.ts",
-            schemas: {
-                path: "app/generated/api/models.ts",
-                mode: "single",
-                type: "zod",
-            },
+            mode: "split",
+            schemas: false,
             override: {
                 zod: {
                     version: 4,

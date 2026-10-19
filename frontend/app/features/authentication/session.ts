@@ -2,7 +2,7 @@ import { redirect } from "react-router";
 import {
     UserResource,
     type UserResource as User,
-} from "~/generated/api/models";
+} from "~/generated/api/operations.schemas";
 import { GetSession200Response } from "~/generated/api/operations";
 import {
     verificationPath,

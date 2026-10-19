@@ -32,16 +32,19 @@ test("sends a protected request and blocks resends until the server cooldown end
                 body: await request.json(),
                 csrf: request.headers.get("X-XSRF-TOKEN"),
             });
-            return new HttpResponse(null, {
-                status: 204,
-                headers: { "Retry-After": "7" },
-            });
+            return HttpResponse.json(
+                { message: "Verification email queued." },
+                {
+                    status: 202,
+                    headers: { "Retry-After": "7" },
+                },
+            );
         }),
     );
     const user = openWaiting();
     await user.click(screen.getByRole("button", { name: resendLabel }));
     expect(
-        await screen.findByText("Email sent", { exact: true }),
+        await screen.findByText("Email queued", { exact: true }),
     ).toBeInTheDocument();
     expect(
         screen.getByRole("button", { name: "Resend available in 0:07" }),
@@ -94,7 +97,7 @@ test.each([
         ).toBeDisabled();
         expect(screen.getByText("Too many attempts")).toBeInTheDocument();
         expect(
-            screen.queryByText("Email sent", { exact: true }),
+            screen.queryByText("Email queued", { exact: true }),
         ).not.toBeInTheDocument();
         expect(
             screen.queryByText("Private diagnostic"),
@@ -109,12 +112,12 @@ test.each([
     },
 );
 
-test("reports a delivery failure truthfully, preserves the account and allows retry after its cooldown", async () => {
+test("reports a queue failure truthfully, preserves the account and allows retry after its cooldown", async () => {
     vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
     const request = vi.fn(() =>
         HttpResponse.json(
             {
-                code: "verification_email_unavailable",
+                code: "verification_queue_unavailable",
                 message: "Private provider diagnostic",
             },
             { status: 503, headers: { "Retry-After": "3" } },
@@ -137,16 +140,21 @@ test("reports a delivery failure truthfully, preserves the account and allows re
         screen.queryByText("Private provider diagnostic"),
     ).not.toBeInTheDocument();
     expect(
-        screen.queryByText("Email sent", { exact: true }),
+        screen.queryByText("Email queued", { exact: true }),
     ).not.toBeInTheDocument();
     await act(() => vi.advanceTimersByTimeAsync(4_000));
     expect(request).toHaveBeenCalledTimes(1);
     server.use(
-        http.post(endpoint, () => new HttpResponse(null, { status: 204 })),
+        http.post(endpoint, () =>
+            HttpResponse.json(
+                { message: "Verification email queued." },
+                { status: 202 },
+            ),
+        ),
     );
     await user.click(screen.getByRole("button", { name: resendLabel }));
     expect(
-        await screen.findByText("Email sent", { exact: true }),
+        await screen.findByText("Email queued", { exact: true }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });
@@ -173,6 +181,10 @@ test.each([
         name: "unexpected success",
         response: () => HttpResponse.json({ message: "Private diagnostic" }),
     },
+    {
+        name: "malformed queue acknowledgement",
+        response: () => HttpResponse.json({ message: 123 }, { status: 202 }),
+    },
 ])(
     "recovers from a $name response without claiming delivery",
     async ({ response }) => {
@@ -182,18 +194,23 @@ test.each([
         await user.click(screen.getByRole("button", { name: resendLabel }));
         await waitFor(() => expect(screen.getByRole("alert")).toHaveFocus());
         expect(
-            screen.queryByText("Email sent", { exact: true }),
+            screen.queryByText("Email queued", { exact: true }),
         ).not.toBeInTheDocument();
         expect(
             screen.queryByText("Private diagnostic"),
         ).not.toBeInTheDocument();
         expect(request).toHaveBeenCalledTimes(1);
         server.use(
-            http.post(endpoint, () => new HttpResponse(null, { status: 204 })),
+            http.post(endpoint, () =>
+                HttpResponse.json(
+                    { message: "Verification email queued." },
+                    { status: 202 },
+                ),
+            ),
         );
         await user.click(screen.getByRole("button", { name: resendLabel }));
         expect(
-            await screen.findByText("Email sent", { exact: true }),
+            await screen.findByText("Email queued", { exact: true }),
         ).toBeInTheDocument();
     },
 );
@@ -209,6 +226,21 @@ test("does not resend without a valid CSRF cookie", async () => {
     await user.click(screen.getByRole("button", { name: resendLabel }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveFocus());
     expect(
-        screen.queryByText("Email sent", { exact: true }),
+        screen.queryByText("Email queued", { exact: true }),
     ).not.toBeInTheDocument();
+});
+
+test("an already-verified resend response continues to the workspace flow without claiming an email was queued", async () => {
+    server.use(
+        http.post(endpoint, () => new HttpResponse(null, { status: 204 })),
+    );
+    const request = new Request("http://localhost/verify-email", {
+        method: "POST",
+        body: new URLSearchParams({ intent: "resend" }),
+    });
+    const response = await waitingAction({ request });
+    expect(response).toBeInstanceOf(Response);
+    if (!(response instanceof Response))
+        throw new Error("Expected a redirect.");
+    expect(response.headers.get("Location")).toBe("/workspaces");
 });

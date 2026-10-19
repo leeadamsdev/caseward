@@ -9,15 +9,15 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Redis;
 
-trait InteractsWithRecoveryQueue
+trait InteractsWithQueue
 {
-    protected function setUpInteractsWithRecoveryQueue(): void
+    protected function setUpInteractsWithQueue(): void
     {
         // Process real jobs inside RefreshDatabase's rollback transaction.
         Config::set('queue.connections.redis.after_commit', false);
     }
 
-    protected function tearDownInteractsWithRecoveryQueue(): void
+    protected function tearDownInteractsWithQueue(): void
     {
         Redis::del('queues:default', 'queues:default:notify', 'queues:default:reserved', 'queues:default:delayed');
     }

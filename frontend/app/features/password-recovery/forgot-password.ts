@@ -1,5 +1,5 @@
 import { emailField } from "~/components/forms/email-field";
-import type { ForgotPasswordRequest } from "~/generated/api/models";
+import type { ForgotPasswordRequest } from "~/generated/api/operations.schemas";
 import { RequestPasswordReset202Response } from "~/generated/api/operations";
 import { guestLoader } from "~/features/authentication/session";
 import {

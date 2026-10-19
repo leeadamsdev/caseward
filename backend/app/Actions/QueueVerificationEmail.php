@@ -7,16 +7,16 @@ namespace App\Actions;
 use App\Models\User;
 use Throwable;
 
-class SendVerificationEmail
+class QueueVerificationEmail
 {
-    public function send(User $user): bool
+    public function queue(User $user): bool
     {
         try {
             $user->sendEmailVerificationNotification();
 
             return true;
         } catch (Throwable $exception) {
-            // Account changes have committed; report the failure and let the user retry delivery.
+            // Account changes have committed; report enqueue failures without claiming delivery.
             report($exception);
 
             return false;

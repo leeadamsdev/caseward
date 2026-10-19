@@ -6,7 +6,7 @@ import { ButtonLink } from "~/components/ui/button";
 import { CardHeading } from "~/components/layout/card-page";
 import { SignOutForm } from "~/features/authentication/sign-out-form";
 import type { VerificationResult } from "~/features/email-verification/verification";
-import type { UserResource as User } from "~/generated/api/models";
+import type { UserResource as User } from "~/generated/api/operations.schemas";
 import { ResendVerificationForm } from "./resend-verification-form";
 import { VerificationForm } from "./verification-form";
 import type { ResendResult } from "./verification";

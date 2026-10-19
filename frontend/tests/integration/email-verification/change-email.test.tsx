@@ -14,7 +14,7 @@ import { RouteDestination } from "../../support/route-destination";
 
 const endpoint = "http://localhost/api/email";
 const saveLabel = "Save and send verification email";
-const saved = { data: corrected, meta: { verification_email_sent: true } };
+const saved = { data: corrected, meta: { verification_email_queued: true } };
 
 function openForm() {
     const Routes = createRoutesStub([
@@ -70,8 +70,8 @@ test("validates an empty address locally and preserves server validation until c
 });
 
 test.each([true, false])(
-    "sends a protected account-bound PATCH and reports delivery %s through its destination",
-    async (sent) => {
+    "sends a protected account-bound PATCH and reports queue submission %s through its destination",
+    async (queued) => {
         const requests: { body: unknown; csrf: string | null }[] = [];
         server.use(
             http.patch(endpoint, async ({ request }) => {
@@ -81,7 +81,7 @@ test.each([true, false])(
                 });
                 return HttpResponse.json({
                     data: corrected,
-                    meta: { verification_email_sent: sent },
+                    meta: { verification_email_queued: queued },
                 });
             }),
         );
@@ -89,9 +89,9 @@ test.each([true, false])(
         await enterEmail(user, "ALEX@EXAMPLE.COM");
         await user.click(screen.getByRole("button", { name: saveLabel }));
         expect(await screen.findByLabelText("Destination")).toHaveTextContent(
-            sent
+            queued
                 ? /^\/verify-email\?updated=1$/
-                : /^\/verify-email\?updated=1&delivery=failed$/,
+                : /^\/verify-email\?updated=1&queue=failed$/,
         );
         expect(requests).toEqual([
             {
@@ -157,7 +157,7 @@ test.each([
         response: () => HttpResponse.json({ message: "Private diagnostic" }),
     },
     {
-        name: "missing delivery metadata",
+        name: "missing queue metadata",
         response: () => HttpResponse.json({ data: corrected }),
     },
     {

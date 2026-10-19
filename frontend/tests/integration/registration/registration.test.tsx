@@ -12,7 +12,7 @@ import { RouteDestination } from "../../support/route-destination";
 const endpoint = "http://localhost/api/register";
 const created = {
     data: { ...registered, email_verified: false },
-    meta: { verification_email_sent: true },
+    meta: { verification_email_queued: true },
 };
 
 function openForm() {

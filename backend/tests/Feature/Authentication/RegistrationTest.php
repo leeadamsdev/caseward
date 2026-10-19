@@ -45,7 +45,7 @@ class RegistrationTest extends TestCase
                 'email' => 'alex@example.com',
                 'email_verified' => false,
             ],
-            'meta' => ['verification_email_sent' => true],
+            'meta' => ['verification_email_queued' => true],
         ]);
 
         $user = User::query()->sole();

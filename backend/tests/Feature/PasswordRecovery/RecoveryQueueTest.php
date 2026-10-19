@@ -16,14 +16,14 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Queue;
 use Tests\Concerns\InteractsWithMail;
-use Tests\Concerns\InteractsWithRecoveryQueue;
+use Tests\Concerns\InteractsWithQueue;
 use Tests\Fixtures\UserFixture;
 use Tests\TestCase;
 
 class RecoveryQueueTest extends TestCase
 {
     use InteractsWithMail;
-    use InteractsWithRecoveryQueue;
+    use InteractsWithQueue;
     use RefreshDatabase;
 
     public function test_real_queue_processing_keeps_email_and_tokens_encrypted_and_builds_a_trusted_frontend_link(): void

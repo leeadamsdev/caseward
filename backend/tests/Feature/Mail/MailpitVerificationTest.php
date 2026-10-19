@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\InteractsWithBrowserSession;
 use Tests\Concerns\InteractsWithEmailVerification;
+use Tests\Concerns\InteractsWithQueue;
 use Tests\Fixtures\UserFixture;
 use Tests\TestCase;
 
@@ -20,6 +21,7 @@ class MailpitVerificationTest extends TestCase
 {
     use InteractsWithBrowserSession;
     use InteractsWithEmailVerification;
+    use InteractsWithQueue;
     use RefreshDatabase;
 
     #[DataProvider('mailpitDeliveries')]
@@ -32,15 +34,15 @@ class MailpitVerificationTest extends TestCase
         if ($journey === 'correction') {
             $user = $this->login(UserFixture::create("typo-{$email}"));
             $this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, 'email' => $email])
-                ->assertOk()->assertJsonPath('meta.verification_email_sent', true);
+                ->assertOk()->assertJsonPath('meta.verification_email_queued', true);
         } elseif ($journey === 'resend') {
             $this->login(UserFixture::create($email));
-            $this->browserRequest('POST', '/api/email/verification-notification')
-                ->assertNoContent()->assertHeader('Retry-After', '60');
+            $this->browserRequest('POST', '/api/email/verification-notification')->assertAccepted()->assertHeader('Retry-After', '60');
         } else {
             $this->browserRequest('POST', '/api/register', [...UserFixture::registration(), 'email' => $email])
-                ->assertCreated()->assertJsonPath('meta.verification_email_sent', true);
+                ->assertCreated()->assertJsonPath('meta.verification_email_queued', true);
         }
+        $this->processDelivery();
         $response = Http::timeout(5)->get('http://mailpit:8025/api/v1/search', ['query' => "to:{$email}"])->throw();
         $messages = $response->json('messages');
         $this->assertIsArray($messages);

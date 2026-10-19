@@ -20,7 +20,7 @@ import {
     UserResource,
     ValidationException,
     WorkspaceResource,
-} from "./models.ts";
+} from "./operations.schemas.ts";
 
 export const GetSession200Response = zod.object({
     data: UserResource,
@@ -152,9 +152,20 @@ export type VerifyEmail503ResponseOutput = zod.output<
 >;
 
 /**
- * Shares the per-account delivery quota with email correction: one per cooldown and five per hour, plus ten requests per minute. Already-verified accounts return 204 without sending.
+ * Queues delivery asynchronously. Shares the per-account quota with email correction: one per cooldown and five per hour, plus ten requests per minute. Already-verified accounts return 204 without enqueueing.
  * @summary Resend the verification email
  */
+export const ResendVerificationEmail202Response = zod.object({
+    message: zod.string(),
+});
+
+export type ResendVerificationEmail202Response = zod.input<
+    typeof ResendVerificationEmail202Response
+>;
+export type ResendVerificationEmail202ResponseOutput = zod.output<
+    typeof ResendVerificationEmail202Response
+>;
+
 export const ResendVerificationEmail204Response = zod.void();
 
 export type ResendVerificationEmail204Response = zod.input<
@@ -197,7 +208,7 @@ export type ResendVerificationEmail429ResponseOutput = zod.output<
 
 export const ResendVerificationEmail503Response = zod.object({
     message: zod.string(),
-    code: zod.literal("verification_email_unavailable").exactOptional(),
+    code: zod.literal("verification_queue_unavailable").exactOptional(),
 });
 
 export type ResendVerificationEmail503Response = zod.input<
@@ -208,7 +219,7 @@ export type ResendVerificationEmail503ResponseOutput = zod.output<
 >;
 
 /**
- * Bind account_id to the account shown by the form. Shares the resend quota. A false verification_email_sent value means the address was saved but delivery failed.
+ * Bind account_id to the account shown by the form. Shares the resend quota. A false verification_email_queued value means the address was saved but enqueueing failed. Queued mail is delivered asynchronously.
  * @summary Correct an unverified email address
  */
 export const UpdateUnverifiedEmailBody = UpdateEmailRequest;
@@ -223,7 +234,7 @@ export type UpdateUnverifiedEmailBodyOutput = zod.output<
 export const UpdateUnverifiedEmail200Response = zod.object({
     data: UserResource,
     meta: zod.object({
-        verification_email_sent: zod.boolean(),
+        verification_email_queued: zod.boolean(),
     }),
 });
 
@@ -465,7 +476,7 @@ export type ResetPassword503ResponseOutput = zod.output<
 >;
 
 /**
- * Creates an unverified session. If verification_email_sent is false, the account exists but email delivery failed; use the resend endpoint.
+ * Creates an unverified session. If verification_email_queued is false, the account exists but enqueueing failed; use the resend endpoint. Queued mail is delivered asynchronously.
  * @summary Create an account
  */
 export const RegisterBody = RegisterRequest;
@@ -476,7 +487,7 @@ export type RegisterBodyOutput = zod.output<typeof RegisterBody>;
 export const Register201Response = zod.object({
     data: UserResource,
     meta: zod.object({
-        verification_email_sent: zod.boolean(),
+        verification_email_queued: zod.boolean(),
     }),
 });
 

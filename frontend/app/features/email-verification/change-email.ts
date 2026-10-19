@@ -1,7 +1,7 @@
 import { redirect } from "react-router";
 import { emailField } from "~/components/forms/email-field";
 import { userSchema } from "~/features/authentication/session";
-import type { UpdateEmailRequest } from "~/generated/api/models";
+import type { UpdateEmailRequest } from "~/generated/api/operations.schemas";
 import {
     UpdateUnverifiedEmail200Response,
     UpdateUnverifiedEmail403Response,
@@ -75,8 +75,8 @@ export async function changeEmail({
     return redirect(
         user.email_verified
             ? "/workspaces"
-            : meta.verification_email_sent
+            : meta.verification_email_queued
               ? "/verify-email?updated=1"
-              : "/verify-email?updated=1&delivery=failed",
+              : "/verify-email?updated=1&queue=failed",
     );
 }

@@ -78,7 +78,7 @@ services:
         restart: unless-stopped
         stop_grace_period: 45s
         healthcheck:
-            test: ["CMD", "php", "artisan", "queue:monitor", "redis:default"]
+            test: ["CMD", "php", "artisan", "queue:health"]
             interval: 10s
             timeout: 5s
             retries: 5

@@ -74,8 +74,8 @@ test("validates required fields locally and preserves backend validation until c
     expect(posts).toBe(1);
 });
 
-for (const sent of [true, false]) {
-    test(`saves the server-normalized address and reports delivery ${sent ? "success" : "failure"} truthfully`, async ({
+for (const queued of [true, false]) {
+    test(`saves the server-normalized address and reports queue submission ${queued ? "success" : "failure"} truthfully`, async ({
         page,
     }) => {
         let posts = 0;
@@ -98,7 +98,7 @@ for (const sent of [true, false]) {
             await route.fulfill({
                 json: {
                     data: corrected,
-                    meta: { verification_email_sent: sent },
+                    meta: { verification_email_queued: queued },
                 },
             });
         });
@@ -121,9 +121,9 @@ for (const sent of [true, false]) {
             release();
         }
         await expect(page).toHaveURL(
-            sent
+            queued
                 ? "/verify-email?updated=1"
-                : "/verify-email?updated=1&delivery=failed",
+                : "/verify-email?updated=1&queue=failed",
         );
         await expect(
             page.getByText(corrected.email, { exact: true }),
@@ -134,7 +134,7 @@ for (const sent of [true, false]) {
         await expect(
             page.getByText("Email address saved", { exact: true }),
         ).toBeVisible();
-        if (!sent) {
+        if (!queued) {
             await expect(
                 page.getByText(/address was updated, but/),
             ).toBeVisible();
@@ -142,7 +142,8 @@ for (const sent of [true, false]) {
                 "**/api/email/verification-notification",
                 (route) =>
                     route.fulfill({
-                        status: 204,
+                        status: 202,
+                        json: { message: "Verification email queued." },
                         headers: { "Retry-After": "60" },
                     }),
             );
@@ -153,7 +154,7 @@ for (const sent of [true, false]) {
                 })
                 .click();
             await expect(
-                page.getByText("Email sent", { exact: true }),
+                page.getByText("Email queued", { exact: true }),
             ).toBeVisible();
             await expect(page).toHaveURL("/verify-email?updated=1");
         }
@@ -276,7 +277,10 @@ test("does not redirect away after the user leaves an in-flight correction", asy
     await page.route(endpoint, async (route) => {
         await response;
         await route.fulfill({
-            json: { data: corrected, meta: { verification_email_sent: true } },
+            json: {
+                data: corrected,
+                meta: { verification_email_queued: true },
+            },
         });
     });
     await page.getByRole("button", { name: saveLabel }).click();

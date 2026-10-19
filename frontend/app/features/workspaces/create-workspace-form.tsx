@@ -10,7 +10,7 @@ import {
 import { useFormFeedback } from "~/components/forms/use-form-feedback";
 import { ButtonLink } from "~/components/ui/button";
 import { Notice } from "~/components/ui/notice";
-import type { UserResource as User } from "~/generated/api/models";
+import type { UserResource as User } from "~/generated/api/operations.schemas";
 import { WorkspaceFooter } from "./workspace-footer";
 import { workspaceFields, type CreateWorkspaceResult } from "./workspaces";
 

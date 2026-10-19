@@ -1,5 +1,5 @@
 import { newPasswordFields } from "~/components/forms/new-password-fields";
-import type { ResetPasswordRequest } from "~/generated/api/models";
+import type { ResetPasswordRequest } from "~/generated/api/operations.schemas";
 import { ResetPassword422Response } from "~/generated/api/operations";
 import { guestLoader } from "~/features/authentication/session";
 import { resetLink } from "./reset-link";

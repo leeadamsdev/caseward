@@ -33,7 +33,7 @@ class SchemaTest extends TestCase
     }
 
     #[DataProvider('serviceUnavailablePayloads')]
-    public function test_service_outages_and_coded_delivery_failures_are_described_together(?string $code, bool $valid): void
+    public function test_service_outages_and_coded_queue_failures_are_described_together(?string $code, bool $valid): void
     {
         $contract = new ApiContract;
         $schema = JsonPointer::createAbsolute(['paths', '/api/email/verification-notification', 'post', 'responses', '503', 'content', 'application/json', 'schema'])->data($contract->document);
@@ -49,7 +49,7 @@ class SchemaTest extends TestCase
     public static function serviceUnavailablePayloads(): iterable
     {
         yield 'service outage without a code' => [null, true];
-        yield 'mail delivery failure' => ['verification_email_unavailable', true];
+        yield 'queue submission failure' => ['verification_queue_unavailable', true];
         yield 'undocumented error code' => ['unknown_failure', false];
     }
 }

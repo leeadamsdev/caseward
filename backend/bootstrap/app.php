@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureEmailIsVerified;
 use App\Providers\AuthServiceProvider;
 use App\Providers\MailServiceProvider;
 use App\Providers\OpenApiServiceProvider;
+use App\Providers\QueueServiceProvider;
 use App\Providers\SessionServiceProvider;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Foundation\Application;
@@ -16,7 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Exceptions\InvalidSignatureException;
 
 return Application::configure(basePath: dirname(__DIR__))
-    ->withProviders([AuthServiceProvider::class, MailServiceProvider::class, SessionServiceProvider::class, OpenApiServiceProvider::class])
+    ->withProviders([AuthServiceProvider::class, MailServiceProvider::class, SessionServiceProvider::class, OpenApiServiceProvider::class, QueueServiceProvider::class])
     ->withRouting(api: __DIR__.'/../routes/api.php', health: '/up')
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();

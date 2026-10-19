@@ -37,17 +37,17 @@ export function ResendVerificationForm({
 
     return (
         <div className="mt-6">
-            {!pending && result?.status === "sent" && (
+            {!pending && result?.status === "queued" && (
                 <Notice
                     ref={noticeRef}
                     tabIndex={-1}
                     role="status"
-                    title="Email sent"
+                    title="Email queued"
                     className="mb-5"
                 >
                     <p>
-                        A new verification email has been sent. Check your inbox
-                        and spam folder.
+                        Your verification email is queued and should arrive
+                        shortly. Check your inbox and spam folder.
                     </p>
                 </Notice>
             )}
@@ -59,18 +59,18 @@ export function ResendVerificationForm({
                     ref={noticeRef}
                     tabIndex={-1}
                     role="alert"
-                    tone={result.reason === "delivery" ? "warning" : "danger"}
+                    tone={result.reason === "queue" ? "warning" : "danger"}
                     title={
-                        result.reason === "delivery"
-                            ? "Email couldn’t be sent"
-                            : "We couldn’t confirm the email was sent."
+                        result.reason === "queue"
+                            ? "Email couldn’t be queued"
+                            : "We couldn’t confirm the email was queued."
                     }
                     className="mb-5"
                 >
                     <p>
                         {result.reason === "expired"
                             ? "Your security token expired. Please try again."
-                            : result.reason === "delivery"
+                            : result.reason === "queue"
                               ? "Your account is saved. You can try again when the resend timer finishes."
                               : "Check your connection and inbox before trying again. Your request may have reached us."}
                     </p>
@@ -105,7 +105,7 @@ export function ResendVerificationForm({
                     )}
                     <span>
                         {pending
-                            ? "Sending email…"
+                            ? "Requesting email…"
                             : remaining > 0
                               ? `Resend available in ${minutes.toString()}:${seconds}`
                               : "Resend verification email"}
@@ -114,7 +114,7 @@ export function ResendVerificationForm({
             </fetcher.Form>
             <p className="sr-only" role="status">
                 {pending
-                    ? "Sending your verification email. Please wait."
+                    ? "Requesting your verification email. Please wait."
                     : result &&
                         result.status !== "rate-limited" &&
                         remaining === 0

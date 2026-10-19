@@ -30,7 +30,7 @@ class WithVerificationEmailLimit
             throw new LogicException('Verification email limits require an atomic lock provider.');
         }
 
-        // Serialize quota reservations across sessions, including the mail delivery window.
+        // Serialize quota reservations and enqueueing across sessions.
         return $store->lock("verification-email:{$accountId}", 60)->block(10, function () use ($accountId, $operation): mixed {
             $limits = [
                 ["verification-email:minute:{$accountId}", 1, Config::integer('verification.resend_interval_seconds')],

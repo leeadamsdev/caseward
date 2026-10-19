@@ -1,5 +1,5 @@
 import { redirect } from "react-router";
-import type { LoginRequest } from "~/generated/api/models";
+import type { LoginRequest } from "~/generated/api/operations.schemas";
 import { emailField } from "~/components/forms/email-field";
 import { verificationPath } from "~/features/email-verification/links";
 import {

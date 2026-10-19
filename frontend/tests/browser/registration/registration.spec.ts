@@ -11,7 +11,7 @@ const created = {
         email: account.email,
         email_verified: false,
     },
-    meta: { verification_email_sent: true },
+    meta: { verification_email_queued: true },
 };
 
 test("shows the branded ready state and supports keyboard password visibility", async ({

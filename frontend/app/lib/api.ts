@@ -1,4 +1,4 @@
-import { ValidationException } from "~/generated/api/models";
+import { ValidationException } from "~/generated/api/operations.schemas";
 
 const validationSchema = ValidationException.pick({ errors: true });
 

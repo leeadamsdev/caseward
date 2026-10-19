@@ -16,7 +16,7 @@ test("retains registration's restricted session and verifies only after delibera
         await mockSignedInSession(page, user);
         await route.fulfill({
             status: 201,
-            json: { data: user, meta: { verification_email_sent: true } },
+            json: { data: user, meta: { verification_email_queued: true } },
         });
     });
     await page.goto("/register");
@@ -186,14 +186,14 @@ test("clears an expired link's result when navigating to a newer signed link", a
     expect(posts).toBe(1);
 });
 
-test("acknowledges an initial delivery failure without asking the user to register again", async ({
+test("acknowledges an initial queue failure without asking the user to register again", async ({
     page,
 }) => {
     await page.route("**/api/register", async (route) => {
         await mockSignedInSession(page, user);
         await route.fulfill({
             status: 201,
-            json: { data: user, meta: { verification_email_sent: false } },
+            json: { data: user, meta: { verification_email_queued: false } },
         });
     });
     await page.goto("/register");
@@ -204,12 +204,12 @@ test("acknowledges an initial delivery failure without asking the user to regist
     await page
         .getByRole("button", { name: "Create account", exact: true })
         .click();
-    await expect(page).toHaveURL("/verify-email?delivery=failed");
+    await expect(page).toHaveURL("/verify-email?queue=failed");
     await expect(
         page.getByText("Your account is saved", { exact: true }),
     ).toBeVisible();
     await expect(
-        page.getByText(/We couldn’t send your verification email/),
+        page.getByText(/We couldn’t queue your verification email/),
     ).toBeVisible();
     await expect(
         page.getByText("Check your inbox for a verification link:", {

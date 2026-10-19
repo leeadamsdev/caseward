@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\EmailVerification;
 
 use App\Models\User;
+use App\Notifications\VerificationNotification;
 use Illuminate\Auth\Events\Verified;
-use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -25,12 +25,12 @@ class VerificationTest extends TestCase
     use InteractsWithEmailVerification;
     use RefreshDatabase;
 
-    public function test_registration_sends_an_expiring_frontend_link_and_establishes_a_restricted_session(): void
+    public function test_registration_queues_verification_and_establishes_a_restricted_session(): void
     {
         $oldCookies = $this->cookies;
         $oldToken = $this->cookies['XSRF-TOKEN'];
         $this->browserRequest('POST', '/api/register', UserFixture::registration())
-            ->assertCreated()->assertJsonPath('meta.verification_email_sent', true);
+            ->assertCreated()->assertJsonPath('meta.verification_email_queued', true);
         $user = User::query()->sole();
         $registeredCookies = $this->cookies;
         $this->cookies = $oldCookies;
@@ -46,9 +46,9 @@ class VerificationTest extends TestCase
                 'message' => 'Verify your email address before continuing.',
                 'code' => 'email_unverified',
             ]);
-        Notification::assertSentToTimes($user, VerifyEmail::class, 1);
-        $notification = Notification::sent($user, VerifyEmail::class)->sole();
-        $this->assertInstanceOf(VerifyEmail::class, $notification);
+        Notification::assertSentToTimes($user, VerificationNotification::class, 1);
+        $notification = Notification::sent($user, VerificationNotification::class)->sole();
+        $this->assertInstanceOf(VerificationNotification::class, $notification);
         $link = $notification->toMail($user)->actionUrl;
         $this->assertStringStartsWith('http://localhost:5173/email/verify/', $link);
         parse_str((string) parse_url($link, PHP_URL_QUERY), $query);

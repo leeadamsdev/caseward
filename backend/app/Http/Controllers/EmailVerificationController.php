@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Actions\SendVerificationEmail;
+use App\Actions\QueueVerificationEmail;
 use App\Actions\WithVerificationEmailLimit;
 use App\Http\Requests\UpdateEmailRequest;
 use App\Http\Resources\UserResource;
@@ -16,6 +16,7 @@ use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response as ApiResponse;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Config;
@@ -65,13 +66,14 @@ class EmailVerificationController
         return response()->noContent();
     }
 
-    #[Endpoint(operationId: 'resendVerificationEmail', title: 'Resend the verification email', description: 'Shares the per-account delivery quota with email correction: one per cooldown and five per hour, plus ten requests per minute. Already-verified accounts return 204 without sending.')]
+    #[Endpoint(operationId: 'resendVerificationEmail', title: 'Resend the verification email', description: 'Queues delivery asynchronously. Shares the per-account quota with email correction: one per cooldown and five per hour, plus ten requests per minute. Already-verified accounts return 204 without enqueueing.')]
     #[IgnoreResponse(200)]
+    #[ApiResponse(202, type: 'array{message: string}')]
     #[ApiResponse(204)]
-    #[Header('Retry-After', type: 'int', required: false, status: 204, description: 'Seconds until another delivery is allowed; absent for an already-verified account.')]
-    #[ApiResponse(503, type: 'array{message: string, code: "verification_email_unavailable"}')]
-    #[Header('Retry-After', type: 'int', required: true, status: 503, description: 'Delivery retry delay in seconds.')]
-    public function resend(Request $request, SendVerificationEmail $verificationEmail, WithVerificationEmailLimit $limit): Response
+    #[Header('Retry-After', type: 'int', required: true, status: 202, description: 'Seconds until another email can be queued.')]
+    #[ApiResponse(503, type: 'array{message: string, code: "verification_queue_unavailable"}')]
+    #[Header('Retry-After', type: 'int', required: true, status: 503, description: 'Queue retry delay in seconds.')]
+    public function resend(Request $request, QueueVerificationEmail $verificationEmail, WithVerificationEmailLimit $limit): Response|JsonResponse
     {
         $user = $this->user($request);
 
@@ -79,23 +81,24 @@ class EmailVerificationController
             return response()->noContent();
         }
 
-        return $limit->run($user->id, function () use ($user, $verificationEmail): Response {
-            if (! $verificationEmail->send($user)) {
+        return $limit->run($user->id, function () use ($user, $verificationEmail): JsonResponse {
+            if (! $verificationEmail->queue($user)) {
                 abort(response()->json([
-                    'message' => 'We could not send your verification email. Please try again later.',
-                    'code' => 'verification_email_unavailable',
+                    'message' => 'We could not queue your verification email. Please try again later.',
+                    'code' => 'verification_queue_unavailable',
                 ], 503)->header('Retry-After', (string) Config::integer('verification.resend_interval_seconds')));
             }
 
-            return response()->noContent()->header('Retry-After', (string) Config::integer('verification.resend_interval_seconds'));
+            return response()->json(['message' => 'Verification email queued.'], 202)
+                ->header('Retry-After', (string) Config::integer('verification.resend_interval_seconds'));
         });
     }
 
-    #[Endpoint(operationId: 'updateUnverifiedEmail', title: 'Correct an unverified email address', description: 'Bind account_id to the account shown by the form. Shares the resend quota. A false verification_email_sent value means the address was saved but delivery failed.')]
-    #[ApiResponse(200, type: 'array{data: UserResource, meta: array{verification_email_sent: bool}}')]
+    #[Endpoint(operationId: 'updateUnverifiedEmail', title: 'Correct an unverified email address', description: 'Bind account_id to the account shown by the form. Shares the resend quota. A false verification_email_queued value means the address was saved but enqueueing failed. Queued mail is delivered asynchronously.')]
+    #[ApiResponse(200, type: 'array{data: UserResource, meta: array{verification_email_queued: bool}}')]
     #[ApiResponse(403, type: 'array{message: string, code: "email_already_verified"}')]
     #[ApiResponse(409, type: 'array{message: string, code: "account_context_changed"}')]
-    public function update(UpdateEmailRequest $request, SendVerificationEmail $verificationEmail, WithVerificationEmailLimit $limit): UserResource
+    public function update(UpdateEmailRequest $request, QueueVerificationEmail $verificationEmail, WithVerificationEmailLimit $limit): UserResource
     {
         $account = $this->user($request);
         if ($request->integer('account_id') !== $account->id) {
@@ -126,7 +129,7 @@ class EmailVerificationController
             }
 
             return (new UserResource($user))->additional([
-                'meta' => ['verification_email_sent' => $verificationEmail->send($user)],
+                'meta' => ['verification_email_queued' => $verificationEmail->queue($user)],
             ]);
         });
     }

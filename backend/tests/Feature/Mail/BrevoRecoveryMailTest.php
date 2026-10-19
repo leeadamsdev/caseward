@@ -12,13 +12,13 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Tests\Concerns\InteractsWithRecoveryQueue;
+use Tests\Concerns\InteractsWithQueue;
 use Tests\Fixtures\UserFixture;
 use Tests\TestCase;
 
 class BrevoRecoveryMailTest extends TestCase
 {
-    use InteractsWithRecoveryQueue;
+    use InteractsWithQueue;
     use RefreshDatabase;
 
     #[DataProvider('recoveryEmails')]

@@ -4,7 +4,7 @@ import {
     WorkspaceResource,
     type WorkspaceResource as Workspace,
     type CreateWorkspaceRequest,
-} from "~/generated/api/models";
+} from "~/generated/api/operations.schemas";
 import {
     CreateWorkspace201Response,
     CreateWorkspace409Response,

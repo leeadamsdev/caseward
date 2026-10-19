@@ -1,4 +1,4 @@
-import type { WorkspaceResource as Workspace } from "~/generated/api/models";
+import type { WorkspaceResource as Workspace } from "~/generated/api/operations.schemas";
 import type { ListWorkspaces200Response } from "~/generated/api/operations";
 
 export const workspaceId = (number: number) =>

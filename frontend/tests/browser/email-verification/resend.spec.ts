@@ -27,7 +27,11 @@ test("sends once, honours the server cooldown and keeps verification checks and 
         expect(route.request().headers()["x-xsrf-token"]).toBe("test=token");
         expect(route.request().postDataJSON()).toEqual({});
         await response;
-        await route.fulfill({ status: 204, headers: { "Retry-After": "7" } });
+        await route.fulfill({
+            status: 202,
+            json: { message: "Verification email queued." },
+            headers: { "Retry-After": "7" },
+        });
     });
     await page.goto("/verify-email");
     try {
@@ -38,7 +42,7 @@ test("sends once, honours the server cooldown and keeps verification checks and 
             })
             .click();
         await expect(
-            page.getByRole("button", { name: "Sending email…" }),
+            page.getByRole("button", { name: "Requesting email…" }),
         ).toBeDisabled();
         await expect(
             page.getByRole("button", { name: "I’ve verified my email" }),
@@ -53,7 +57,7 @@ test("sends once, honours the server cooldown and keeps verification checks and 
         release();
     }
     await expect(
-        page.getByRole("status").filter({ hasText: "Email sent" }),
+        page.getByRole("status").filter({ hasText: "Email queued" }),
     ).toBeFocused();
     await expect(
         page.getByRole("button", { name: "Resend available in 0:07" }),
@@ -108,7 +112,9 @@ test("shows an accessible hourly resend limit without claiming delivery", async 
     await expect(
         page.getByText("Too many attempts", { exact: true }),
     ).toBeVisible();
-    await expect(page.getByText("Email sent", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Email queued", { exact: true })).toHaveCount(
+        0,
+    );
     await expect(page.getByText("Private diagnostic")).toHaveCount(0);
     await expect(
         page.getByRole("button", { name: "Sign out", exact: true }),
@@ -127,7 +133,7 @@ test("shows an accessible hourly resend limit without claiming delivery", async 
     expect(posts).toBe(1);
 });
 
-test("recovers from initial and resend delivery failures without losing the account", async ({
+test("recovers from initial and resend queue failures without losing the account", async ({
     page,
 }) => {
     await page.clock.install();
@@ -136,12 +142,12 @@ test("recovers from initial and resend delivery failures without losing the acco
             status: 503,
             headers: { "Retry-After": "3" },
             json: {
-                code: "verification_email_unavailable",
+                code: "verification_queue_unavailable",
                 message: "Private provider diagnostic",
             },
         }),
     );
-    await page.goto("/verify-email?delivery=failed");
+    await page.goto("/verify-email?queue=failed");
     await page
         .getByRole("button", { name: "Resend verification email", exact: true })
         .click();
@@ -153,17 +159,23 @@ test("recovers from initial and resend delivery failures without losing the acco
         page.getByRole("button", { name: "Resend available in 0:03" }),
     ).toBeDisabled();
     await expect(page.getByText(user.email, { exact: true })).toBeVisible();
-    await expect(page.getByText("Email sent", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Email queued", { exact: true })).toHaveCount(
+        0,
+    );
     await expect(page.getByText("Private provider diagnostic")).toHaveCount(0);
     await page.clock.fastForward(4_000);
     await page.route(endpoint, (route) =>
-        route.fulfill({ status: 204, headers: { "Retry-After": "7" } }),
+        route.fulfill({
+            status: 202,
+            json: { message: "Verification email queued." },
+            headers: { "Retry-After": "7" },
+        }),
     );
     await page
         .getByRole("button", { name: "Resend verification email", exact: true })
         .click();
     await expect(
-        page.getByRole("status").filter({ hasText: "Email sent" }),
+        page.getByRole("status").filter({ hasText: "Email queued" }),
     ).toBeFocused();
     await expect(
         page.getByRole("heading", { name: "Check your email" }),
@@ -192,16 +204,22 @@ test("focuses an accessible resend error and supports retry without claiming del
         .getByRole("button", { name: "Resend verification email", exact: true })
         .click();
     await expect(page.getByRole("alert")).toBeFocused();
-    await expect(page.getByText("Email sent", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Email queued", { exact: true })).toHaveCount(
+        0,
+    );
     await checkAccessibility(page);
     await page.route(endpoint, (route) =>
-        route.fulfill({ status: 204, headers: { "Retry-After": "7" } }),
+        route.fulfill({
+            status: 202,
+            json: { message: "Verification email queued." },
+            headers: { "Retry-After": "7" },
+        }),
     );
     await page
         .getByRole("button", { name: "Resend verification email", exact: true })
         .click();
     await expect(
-        page.getByRole("status").filter({ hasText: "Email sent" }),
+        page.getByRole("status").filter({ hasText: "Email queued" }),
     ).toBeFocused();
 });
 
@@ -213,7 +231,11 @@ test("sends a new email directly from an expired link", async ({ page }) => {
         }),
     );
     await page.route(endpoint, (route) =>
-        route.fulfill({ status: 204, headers: { "Retry-After": "60" } }),
+        route.fulfill({
+            status: 202,
+            json: { message: "Verification email queued." },
+            headers: { "Retry-After": "60" },
+        }),
     );
     await page.goto(link);
     await page
@@ -223,7 +245,7 @@ test("sends a new email directly from an expired link", async ({ page }) => {
         .getByRole("button", { name: "Resend verification email", exact: true })
         .click();
     await expect(
-        page.getByRole("status").filter({ hasText: "Email sent" }),
+        page.getByRole("status").filter({ hasText: "Email queued" }),
     ).toBeFocused();
     await expect(
         page.getByRole("button", { name: /Resend available in/ }),
@@ -267,7 +289,11 @@ test("observes the server limit after reload and stops at verified account acces
     page,
 }) => {
     await page.route(endpoint, (route) =>
-        route.fulfill({ status: 204, headers: { "Retry-After": "60" } }),
+        route.fulfill({
+            status: 202,
+            json: { message: "Verification email queued." },
+            headers: { "Retry-After": "60" },
+        }),
     );
     await page.goto("/verify-email");
     await page
@@ -303,7 +329,11 @@ test("fits a narrow screen with enlarged text and reduced motion", async ({
 }) => {
     await page.setViewportSize({ width: 320, height: 640 });
     await page.route(endpoint, (route) =>
-        route.fulfill({ status: 204, headers: { "Retry-After": "60" } }),
+        route.fulfill({
+            status: 202,
+            json: { message: "Verification email queued." },
+            headers: { "Retry-After": "60" },
+        }),
     );
     await page.goto("/verify-email");
     await page.evaluate(() => {
@@ -312,7 +342,7 @@ test("fits a narrow screen with enlarged text and reduced motion", async ({
     await page
         .getByRole("button", { name: "Resend verification email", exact: true })
         .click();
-    await expect(page.getByText("Email sent", { exact: true })).toBeVisible();
+    await expect(page.getByText("Email queued", { exact: true })).toBeVisible();
     expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBe(320);

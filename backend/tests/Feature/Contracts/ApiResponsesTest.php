@@ -13,8 +13,8 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Testing\TestResponse;
 use PHPUnit\Framework\Attributes\DataProvider;
+use RedisException;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Mailer\Exception\TransportException;
 use Tests\Concerns\InteractsWithWorkspaces;
 use Tests\Fixtures\UserFixture;
 use Tests\Support\ApiContract;
@@ -72,20 +72,20 @@ class ApiResponsesTest extends TestCase
         $this->check($this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, 'email' => 'another@example.com'])->assertForbidden(), 'PATCH', '/api/email');
     }
 
-    public function test_resend_success_with_and_without_a_delivery_delay_matches(): void
+    public function test_resend_queued_and_already_verified_responses_match(): void
     {
         $user = $this->user(verified: false);
         $this->signIn($user);
-        $this->check($this->browserRequest('POST', '/api/email/verification-notification')->assertNoContent()->assertHeader('Retry-After'), 'POST', '/api/email/verification-notification');
+        $this->check($this->browserRequest('POST', '/api/email/verification-notification')->assertAccepted()->assertHeader('Retry-After'), 'POST', '/api/email/verification-notification');
         $user->markEmailAsVerified();
         $this->check($this->browserRequest('POST', '/api/email/verification-notification')->assertNoContent()->assertHeaderMissing('Retry-After'), 'POST', '/api/email/verification-notification');
     }
 
-    public function test_failed_delivery_matches_without_losing_recoverable_registration_metadata(): void
+    public function test_queue_failure_matches_without_losing_recoverable_registration_metadata(): void
     {
         Exceptions::fake();
-        Notification::shouldReceive('send')->twice()->andThrow(new TransportException('Delivery failed.'));
-        $this->check($this->browserRequest('POST', '/api/register', UserFixture::registration())->assertCreated()->assertJsonPath('meta.verification_email_sent', false), 'POST', '/api/register');
+        Notification::shouldReceive('send')->twice()->andThrow(new RedisException('Queue submission failed.'));
+        $this->check($this->browserRequest('POST', '/api/register', UserFixture::registration())->assertCreated()->assertJsonPath('meta.verification_email_queued', false), 'POST', '/api/register');
         $this->check($this->browserRequest('POST', '/api/email/verification-notification')->assertServiceUnavailable()->assertHeader('Retry-After'), 'POST', '/api/email/verification-notification');
     }
 

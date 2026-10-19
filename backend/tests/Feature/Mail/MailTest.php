@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Mail;
 
 use App\Models\User;
+use App\Notifications\VerificationNotification;
 use Illuminate\Mail\Mailer;
 use Illuminate\Mail\Message;
 use Illuminate\Mail\Transport\ArrayTransport;
@@ -141,7 +142,8 @@ class MailTest extends TestCase
         Config::set('mail.logo_url', 'https://images.example.test/caseward-logo-light.png');
         $user = (new User(['email' => 'alex@example.test']))->forceFill(['id' => 42]);
 
-        $user->sendEmailVerificationNotification();
+        // Exercise the transport here; queueing is covered by the verification queue tests.
+        $user->notifyNow(new VerificationNotification($user->email));
 
         $this->assertSame(1, $requests);
     }

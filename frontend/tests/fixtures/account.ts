@@ -1,4 +1,4 @@
-import type { UserResource as User } from "~/generated/api/models";
+import type { UserResource as User } from "~/generated/api/operations.schemas";
 
 export const password = "  a long Unicode passphrase 🔐  ";
 export const account = {

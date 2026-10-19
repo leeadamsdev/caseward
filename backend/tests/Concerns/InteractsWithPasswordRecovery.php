@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Notification;
 
 trait InteractsWithPasswordRecovery
 {
-    use InteractsWithRecoveryQueue;
+    use InteractsWithQueue;
 
     protected function setUpInteractsWithPasswordRecovery(): void
     {

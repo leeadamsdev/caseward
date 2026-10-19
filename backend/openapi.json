@@ -289,7 +289,7 @@
         "/api/email/verification-notification": {
             "post": {
                 "operationId": "resendVerificationEmail",
-                "description": "Shares the per-account delivery quota with email correction: one per cooldown and five per hour, plus ten requests per minute. Already-verified accounts return 204 without sending.",
+                "description": "Queues delivery asynchronously. Shares the per-account quota with email correction: one per cooldown and five per hour, plus ten requests per minute. Already-verified accounts return 204 without enqueueing.",
                 "summary": "Resend the verification email",
                 "tags": [
                     "EmailVerification"
@@ -298,17 +298,35 @@
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
                     },
-                    "204": {
-                        "description": "No content",
+                    "202": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        },
                         "headers": {
                             "Retry-After": {
-                                "description": "Seconds until another delivery is allowed; absent for an already-verified account.",
-                                "required": false,
+                                "description": "Seconds until another email can be queued.",
+                                "required": true,
                                 "schema": {
                                     "type": "integer"
                                 }
                             }
                         }
+                    },
+                    "204": {
+                        "description": "No content"
                     },
                     "503": {
                         "description": "Session, rate limiter, queue or email delivery temporarily unavailable.",
@@ -322,7 +340,7 @@
                                         },
                                         "code": {
                                             "type": "string",
-                                            "const": "verification_email_unavailable"
+                                            "const": "verification_queue_unavailable"
                                         }
                                     },
                                     "required": [
@@ -333,7 +351,7 @@
                         },
                         "headers": {
                             "Retry-After": {
-                                "description": "Delivery retry delay in seconds.",
+                                "description": "Queue retry delay in seconds.",
                                 "required": false,
                                 "schema": {
                                     "type": "integer"
@@ -398,7 +416,7 @@
         "/api/email": {
             "patch": {
                 "operationId": "updateUnverifiedEmail",
-                "description": "Bind account_id to the account shown by the form. Shares the resend quota. A false verification_email_sent value means the address was saved but delivery failed.",
+                "description": "Bind account_id to the account shown by the form. Shares the resend quota. A false verification_email_queued value means the address was saved but enqueueing failed. Queued mail is delivered asynchronously.",
                 "summary": "Correct an unverified email address",
                 "tags": [
                     "EmailVerification"
@@ -427,12 +445,12 @@
                                         "meta": {
                                             "type": "object",
                                             "properties": {
-                                                "verification_email_sent": {
+                                                "verification_email_queued": {
                                                     "type": "boolean"
                                                 }
                                             },
                                             "required": [
-                                                "verification_email_sent"
+                                                "verification_email_queued"
                                             ]
                                         }
                                     },
@@ -861,7 +879,7 @@
         "/api/register": {
             "post": {
                 "operationId": "register",
-                "description": "Creates an unverified session. If verification_email_sent is false, the account exists but email delivery failed; use the resend endpoint.",
+                "description": "Creates an unverified session. If verification_email_queued is false, the account exists but enqueueing failed; use the resend endpoint. Queued mail is delivered asynchronously.",
                 "summary": "Create an account",
                 "tags": [
                     "Register"
@@ -890,12 +908,12 @@
                                         "meta": {
                                             "type": "object",
                                             "properties": {
-                                                "verification_email_sent": {
+                                                "verification_email_queued": {
                                                     "type": "boolean"
                                                 }
                                             },
                                             "required": [
-                                                "verification_email_sent"
+                                                "verification_email_queued"
                                             ]
                                         }
                                     },

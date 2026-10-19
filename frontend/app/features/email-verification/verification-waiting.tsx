@@ -10,7 +10,7 @@ import {
 import { Button } from "~/components/ui/button";
 import { Notice } from "~/components/ui/notice";
 import { CardHeading } from "~/components/layout/card-page";
-import type { UserResource as User } from "~/generated/api/models";
+import type { UserResource as User } from "~/generated/api/operations.schemas";
 import { SignOutForm } from "~/features/authentication/sign-out-form";
 import { ResendVerificationForm } from "./resend-verification-form";
 import type { ResendResult } from "./verification";
@@ -27,8 +27,8 @@ export function VerificationWaiting({ user }: { user: User }) {
     const noticeRef = useRef<HTMLDivElement>(null);
     const pending = revalidator.state !== "idle";
     const updated = params.get("updated") === "1";
-    const deliveryFailed =
-        params.get("delivery") === "failed" && resend.data?.status !== "sent";
+    const queueFailed =
+        params.get("queue") === "failed" && resend.data?.status !== "queued";
 
     useEffect(() => {
         headingRef.current?.focus({ preventScroll: true });
@@ -38,12 +38,12 @@ export function VerificationWaiting({ user }: { user: User }) {
     }, [checked, pending]);
     useEffect(() => {
         if (
-            resend.data?.status !== "sent" ||
-            (!params.has("delivery") && !params.has("account"))
+            resend.data?.status !== "queued" ||
+            (!params.has("queue") && !params.has("account"))
         )
             return;
         const next = new URLSearchParams(params);
-        next.delete("delivery");
+        next.delete("queue");
         next.delete("account");
         setParams(next, { replace: true, preventScrollReset: true });
     }, [resend.data, params, setParams]);
@@ -58,13 +58,11 @@ export function VerificationWaiting({ user }: { user: User }) {
             </div>
             <CardHeading
                 ref={headingRef}
-                title={
-                    deliveryFailed ? "Verify your email" : "Check your email"
-                }
+                title={queueFailed ? "Verify your email" : "Check your email"}
                 description="You’re one step away."
             />
             <p className="text-center text-sm leading-6 text-muted-foreground">
-                {deliveryFailed
+                {queueFailed
                     ? "Verify the email address for your account:"
                     : "Check your inbox for a verification link:"}
                 <strong className="mt-1 block font-semibold wrap-anywhere text-foreground">
@@ -85,7 +83,7 @@ export function VerificationWaiting({ user }: { user: User }) {
             )}
             {!resend.data &&
                 params.get("account") !== "changed" &&
-                (deliveryFailed ? (
+                (queueFailed ? (
                     <Notice
                         tone="warning"
                         title={
@@ -97,8 +95,8 @@ export function VerificationWaiting({ user }: { user: User }) {
                     >
                         <p>
                             {updated
-                                ? "Your email address was updated, but we couldn’t send the verification email. Please try resending it below."
-                                : "We couldn’t send your verification email. Please try resending it below."}
+                                ? "Your email address was updated, but we couldn’t queue the verification email. Please try resending it below."
+                                : "We couldn’t queue your verification email. Please try resending it below."}
                         </p>
                     </Notice>
                 ) : (
@@ -107,9 +105,10 @@ export function VerificationWaiting({ user }: { user: User }) {
                         title={updated ? "Email address saved" : ""}
                     >
                         <p className="leading-6">
-                            Follow the link to verify your address before
-                            continuing. The link expires in 1 hour. If you don’t
-                            see the email, check your spam folder.
+                            Delivery can take a moment. Follow the link to
+                            verify your address before continuing. The link
+                            expires in 1 hour. If you don’t see the email, check
+                            your spam folder.
                         </p>
                     </Notice>
                 ))}
@@ -129,11 +128,11 @@ export function VerificationWaiting({ user }: { user: User }) {
             <ResendVerificationForm
                 fetcher={resend}
                 disabled={pending || navigation.state !== "idle"}
-                variant={deliveryFailed ? "primary" : "outline"}
+                variant={queueFailed ? "primary" : "outline"}
             >
                 <Button
                     className="w-full"
-                    variant={deliveryFailed ? "outline" : "primary"}
+                    variant={queueFailed ? "outline" : "primary"}
                     disabled={
                         pending || resending || navigation.state !== "idle"
                     }

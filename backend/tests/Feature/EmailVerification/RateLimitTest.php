@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\EmailVerification;
 
-use Illuminate\Auth\Notifications\VerifyEmail;
+use App\Notifications\VerificationNotification;
 use Illuminate\Cache\RedisStore;
 use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,8 +27,8 @@ class RateLimitTest extends TestCase
     public function test_resends_and_corrections_share_an_account_rate_limit_across_sessions_and_connections(): void
     {
         $user = $this->login();
-        $this->browserRequest('POST', '/api/email/verification-notification')->assertNoContent();
-        Notification::assertSentToTimes($user, VerifyEmail::class, 1);
+        $this->browserRequest('POST', '/api/email/verification-notification')->assertAccepted();
+        Notification::assertSentToTimes($user, VerificationNotification::class, 1);
         Redis::purge();
         $this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, 'email' => 'corrected@example.com'])
             ->assertTooManyRequests()->assertHeader('Retry-After');
@@ -39,8 +39,8 @@ class RateLimitTest extends TestCase
         $this->cookies = [];
         $this->browserRequest('GET', '/sanctum/csrf-cookie')->assertNoContent();
         $other = $this->login(UserFixture::create('other@example.com'));
-        $this->browserRequest('POST', '/api/email/verification-notification')->assertNoContent();
-        Notification::assertSentToTimes($other, VerifyEmail::class, 1);
+        $this->browserRequest('POST', '/api/email/verification-notification')->assertAccepted();
+        Notification::assertSentToTimes($other, VerificationNotification::class, 1);
         $this->assertSame('alex@example.com', $user->refresh()->email);
     }
 
@@ -54,7 +54,7 @@ class RateLimitTest extends TestCase
         }
         $this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, 'email' => 'corrected@example.com'])->assertOk();
         $this->browserRequest('POST', '/api/email/verification-notification')->assertTooManyRequests();
-        Notification::assertSentToTimes($user, VerifyEmail::class, 1);
+        Notification::assertSentToTimes($user, VerificationNotification::class, 1);
     }
 
     public function test_invalid_corrections_still_have_a_shared_account_request_limit(): void
@@ -70,7 +70,7 @@ class RateLimitTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    public function test_the_account_email_lock_covers_delivery_and_is_released_afterwards(): void
+    public function test_the_account_email_lock_covers_enqueueing_and_is_released_afterwards(): void
     {
         $user = $this->login();
         $blocked = false;
@@ -84,7 +84,7 @@ class RateLimitTest extends TestCase
                 $lock->release();
             }
         });
-        $this->browserRequest('POST', '/api/email/verification-notification')->assertNoContent();
+        $this->browserRequest('POST', '/api/email/verification-notification')->assertAccepted();
         $this->assertTrue($blocked);
         $store = Cache::store('redis')->getStore();
         $this->assertInstanceOf(LockProvider::class, $store);
@@ -103,7 +103,7 @@ class RateLimitTest extends TestCase
 
         for ($attempt = 0; $attempt < 5; $attempt++) {
             if ($attempt % 2 === 0) {
-                $this->browserRequest('POST', '/api/email/verification-notification')->assertNoContent();
+                $this->browserRequest('POST', '/api/email/verification-notification')->assertAccepted();
             } else {
                 $this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, 'email' => "corrected-{$attempt}@example.com"])
                     ->assertOk();
@@ -116,7 +116,7 @@ class RateLimitTest extends TestCase
         $limited = $this->browserRequest('POST', '/api/email/verification-notification')->assertTooManyRequests();
         $this->assertGreaterThan(3500, (int) $limited->headers->get('Retry-After'));
         $this->browserRequest('PATCH', '/api/email', ['account_id' => $user->id, 'email' => 'blocked@example.com'])->assertTooManyRequests();
-        Notification::assertSentToTimes($user, VerifyEmail::class, 5);
+        Notification::assertSentToTimes($user, VerificationNotification::class, 5);
         $this->assertSame('corrected-3@example.com', $user->refresh()->email);
     }
 
@@ -124,13 +124,12 @@ class RateLimitTest extends TestCase
     {
         Config::set('verification.resend_interval_seconds', 7);
         $user = $this->login();
-        $this->browserRequest('POST', '/api/email/verification-notification')
-            ->assertNoContent()->assertHeader('Retry-After', '7');
+        $this->browserRequest('POST', '/api/email/verification-notification')->assertAccepted()->assertHeader('Retry-After', '7');
         $limited = $this->browserRequest('POST', '/api/email/verification-notification')->assertTooManyRequests();
         $retryAfter = (int) $limited->headers->get('Retry-After');
         $this->assertGreaterThan(0, $retryAfter);
         $this->assertLessThanOrEqual(7, $retryAfter);
-        Notification::assertSentToTimes($user, VerifyEmail::class, 1);
+        Notification::assertSentToTimes($user, VerificationNotification::class, 1);
     }
 
     public function test_verification_attempts_are_rate_limited(): void
@@ -145,7 +144,7 @@ class RateLimitTest extends TestCase
         $this->assertFalse($user->refresh()->hasVerifiedEmail());
     }
 
-    public function test_the_session_lock_covers_the_external_email_delivery_window(): void
+    public function test_the_session_lock_covers_enqueueing(): void
     {
         $this->login();
         $session = $this->browserRequest('GET', '/api/session')->assertOk();
@@ -159,7 +158,7 @@ class RateLimitTest extends TestCase
             $lockTtl = Redis::ttl("{$prefix}session:{$sessionId}");
         });
 
-        $this->browserRequest('POST', '/api/email/verification-notification')->assertNoContent();
+        $this->browserRequest('POST', '/api/email/verification-notification')->assertAccepted();
 
         $this->assertIsInt($lockTtl);
         $this->assertGreaterThan(15, $lockTtl);
